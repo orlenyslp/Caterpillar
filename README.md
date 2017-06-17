@@ -10,10 +10,10 @@ The folder caterpillar_core includes the implementation of the core components, 
 
 Before using the Caterpillar it is necessary to download the source code of the applications.
 
-#How to use Caterpillar Core
+## How to use Caterpillar Core
 
 Open a terminal in your computer and move to the folder caterpillar_core. 
 
-For installing the dependencies, run the comand npm instsall.
+For installing the dependencies, run the comand $ npm instsall /$.
 
 For running the application use the comand gulp.
