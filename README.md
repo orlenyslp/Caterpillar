@@ -8,3 +8,12 @@ Caterpillar also provides a set of modelling tools and an execution panel which 
 Caterpillar’s code distribution in this repository contains three different folders. 
 The folder caterpillar_core includes the implementation of the core components, execution_panel includes the code of a BPMN visualizer that serves to keep track of the execution state of process instances and lets users check in process data, and services_manager contains the implementation for an external service used for demonstration purposes.
 
+Before using the Caterpillar it is necessary to download the source code of the applications.
+
+#How to use Caterpillar Core
+
+Open a terminal in your computer and move to the folder caterpillar_core. 
+
+For installing the dependencies, run the comand npm instsall.
+
+For running the application use the comand gulp.
