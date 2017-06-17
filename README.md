@@ -18,7 +18,7 @@ Open a terminal in your computer and move to the folder caterpillar_core.
 Primero inicializar el repositorio con __git init <nombreRepositorio>__
 tambien se puede inicializar una carpeta ya existente ej
 
-    $ pm install/$
+     pm install
 
 For installing the dependencies, run the comand 
 
