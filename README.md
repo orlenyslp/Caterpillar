@@ -14,6 +14,15 @@ Before using the Caterpillar it is necessary to download the source code of the 
 
 Open a terminal in your computer and move to the folder caterpillar_core. 
 
-For installing the dependencies, run the comand $ npm instsall /$.
+
+Primero inicializar el repositorio con __git init <nombreRepositorio>__
+tambien se puede inicializar una carpeta ya existente ej
+
+    $ cd nombreRepositorio
+    nombreRepositorio/$ git init
+
+For installing the dependencies, run the comand 
+
+$ npm instsall /$.
 
 For running the application use the comand gulp.
