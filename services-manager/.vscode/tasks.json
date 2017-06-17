@@ -1,0 +1,52 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "0.1.0",
+    "command": "gulp",
+    "isShellCommand": true,
+    "args": [
+        "--no-color"
+    ],
+    "tasks": [
+        {
+            "taskName": "buildAll",
+            "args": [],
+            "isBuildCommand": true,
+            "isBackground": false,
+            "problemMatcher": [
+                "$lessCompile",
+                "$tsc"
+            ]
+        },
+        {
+            "taskName": "default",
+            "args": [],
+            "isBackground": false,
+            "problemMatcher": [
+                "$lessCompile",
+                "$tsc"
+            ]
+        },
+        {
+            "taskName": "watch",
+            "args": [],
+            "isBackground": true,
+            "problemMatcher": [
+                "$lessCompile",
+                "$tsc"
+            ]
+        },
+        {
+            "taskName": "test",
+            "args": [],
+            "isTestCommand": true
+        },
+        {
+            "taskName": "less",
+            "args": [],
+            "problemMatcher": [
+                "$lessCompile"
+            ]
+        }
+    ]
+}

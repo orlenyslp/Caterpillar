@@ -1,0 +1,24 @@
+
+
+contract <%= nodeName(processId()) %>_WorkList {
+<% nodeList.forEach( nodeId => {
+    var node = nodeMap.get(nodeId); -%>
+    struct <%= nodeName(nodeId) %>_Request {
+        function (uint<%= getParameterType(nodeId, true) %>) external returns (bool) callback;    
+    }
+    <%= nodeName(nodeId) %>_Request [] <%= nodeName(nodeId) %>_requests;
+    event <%= nodeName(nodeId) %>_Requested(uint);
+
+    function <%= nodeName(nodeId) %>_start (function (uint<%= getParameterType(nodeId, true) %>) external returns (bool) callback) returns (uint) {
+        uint index = <%= nodeName(nodeId) %>_requests.length;
+        <%= nodeName(nodeId) %>_requests.push(<%= nodeName(nodeId) %>_Request(callback));
+        <%= nodeName(nodeId) %>_Requested(index);
+        return index;
+    }
+    
+    function <%= nodeName(nodeId) %>_callback (uint reqId<%= getParameters(nodeId, true) %>) {
+        <%= nodeName(nodeId) %>_requests[reqId].callback(reqId<%= getParameters(nodeId, false) %>);
+    }
+
+<%  }) -%>
+}

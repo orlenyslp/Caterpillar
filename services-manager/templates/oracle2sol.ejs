@@ -1,0 +1,23 @@
+pragma solidity ^0.4.10;
+
+contract <%= oracleInfo.oracleName %>_Oracle {
+    struct Request {
+<%        oracleInfo.parameterInfo.forEach(val => { -%>
+        <%= val.type %> <%= val.name %>;    
+<%        }) -%>
+        function (uint, uint) external returns (bool) callback;      
+    }
+    Request [] requests ;
+    event <%= oracleInfo.oracleName %>_Requested(uint);
+
+    function query_service (<%= concatOracleParameters(oracleInfo.oracleName, true) %> function (uint, uint) external returns (bool) callback) returns (uint) {
+        uint index = requests.length;
+        requests.push(Request(<%= concatOracleParameters(oracleInfo.oracleName, false) %> callback));
+        <%= oracleInfo.oracleName %>_Requested(index);
+        return index;
+    }
+    
+    function reply_callbak (uint reqId , uint result) {
+        requests[reqId].callback(reqId, result);
+    }
+}
