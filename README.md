@@ -38,7 +38,7 @@ The application provides a REST API to interact with the core of Caterpillar. Th
 
 From the caterpillar_core folder is possible to run the script
 
-     node demo_running_example.js
+     node demo_running_example_test.js
      
 to register, create an instance and get the address of a sample process provided in the file __demo_running_example.bpmn__. For running the sample process it is also requred to run first the application __services_manager__ and to register the external services.
 
@@ -64,9 +64,9 @@ The application provides a REST API to interact with services manager. The follo
 | GET  | /services      | Retrieves the list of registered external services                     |
 | GET  | /services/:sid | Retrieves smart contract/address of an external service                |
 
-## How to use Services Manager
+## How to use Execution Panel
 
-Open a terminal in your computer and move into the folder __services_manager__. 
+Open a terminal in your computer and move into the folder __execution-panel__. 
 
 For installing the dependencies, run the comand 
 
