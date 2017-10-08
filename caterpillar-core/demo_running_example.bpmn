@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="1.2.2">
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="1.6.0">
   <bpmn:process id="Process_1" isExecutable="false">
     <bpmn:documentation><![CDATA[bool applicantEligible = false;
 uint monthlyRevenue = 0;
@@ -18,7 +18,7 @@ uint assessLoanRiskResult = 0;
       <bpmn:outgoing>SequenceFlow_1jygpfu</bpmn:outgoing>
     </bpmn:userTask>
     <bpmn:serviceTask id="Task_1aqv42f" name="Assess Loan Risk" camunda:expression="uint monthlyRevenue, uint loadAmount">
-      <bpmn:documentation><![CDATA[(uint monthlyRevenue, uint loadAmount) : (uint _assessLoanRiskResult) -> {assessLoanRiskResult = _assessLoanRiskResult;}]]></bpmn:documentation>
+      <bpmn:documentation><![CDATA[Assess_Loan_Risk_Oracle($Assess_Loan_Risk).query_service(uint monthlyRevenue, uint loadAmount) : (uint _assessLoanRiskResult) -> {assessLoanRiskResult = _assessLoanRiskResult;}]]></bpmn:documentation>
       <bpmn:extensionElements>
         <camunda:inputOutput>
           <camunda:inputParameter name="Input_2k32da1">{name:Assess_Loan_Risk}</camunda:inputParameter>
@@ -72,7 +72,8 @@ else
     <bpmn:sequenceFlow id="SequenceFlow_1pm1lpg" sourceRef="ExclusiveGateway_0o4nv8y" targetRef="Task_1n2g1ih" />
     <bpmn:sequenceFlow id="SequenceFlow_05u8ux5" sourceRef="Task_1n2g1ih" targetRef="ExclusiveGateway_18clflo" />
     <bpmn:serviceTask id="Task_1n2g1ih" name="Appraise Property" camunda:expression="a = 3">
-      <bpmn:documentation><![CDATA[(uint cost) : (uint _appraisePropertyResult) -> { appraisePropertyResult = _appraisePropertyResult;}]]></bpmn:documentation>
+      <bpmn:documentation><![CDATA[Appraise_Property_Oracle($Appraise_Property).query_service(uint cost) : (uint _appraisePropertyResult) -> { appraisePropertyResult = _appraisePropertyResult;}
+]]></bpmn:documentation>
       <bpmn:extensionElements>
         <camunda:inputOutput>
           <camunda:inputParameter name="Input_264oln8">{name:Appraise_Property}</camunda:inputParameter>

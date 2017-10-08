@@ -1,15 +1,17 @@
 'use strict';
 
-const request = require('request');
-const async = require('async');
+var request = require('request');
 
-async.seq(
-    (req, callback) => {
-        request({ url: 'http://localhost:3010/oracles', method: 'POST', json: true }, (err, resp) => {
-            console.log('done');
-            callback(null, 'done');
-        })
+request.post(
+    'http://localhost:3010/services',
+    function (error, response, body) {
+        if (!error && response.statusCode == 200) {
+            console.log("Done")
+        }
     }
-)({});
+);
 
-console.log('Working on oracle creation');
+
+
+
+

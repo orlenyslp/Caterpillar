@@ -1,3 +1,4 @@
+
 export class ModelInfo {
   name: string;
   bpmn: string;
@@ -11,6 +12,14 @@ export class ParameterInfo {
     constructor(public type: string, public name: string) {}
 }
 
+export class OracleInfo {
+    address: string = null;
+    functionName: string = null;
+    functionParameters: Array<ParameterInfo> = new Array();
+
+    constructor (public oracleName: string) {}
+}
+
 export class ControlFlowInfo {
     parent: ControlFlowInfo = null;
     isEmbedded: boolean = false;
@@ -22,10 +31,11 @@ export class ControlFlowInfo {
     callActivities: Map<string, string> = new Map();
     childSubprocesses: Map<string, string> = new Map();
     activeMessages: Array<string>;
-    globalParameters: string = "";
+    globalParameters: string = ""; 
     localParameters: Map<string, Array<ParameterInfo>> = new Map();
-    localOracleData: Map<string, Array<ParameterInfo>> = new Map();
-    localOracleAddress: Map<string, string> = new Map();
+    oracleInfo: Map<string, OracleInfo> = new Map();
+    oracleTaskMap: Map<string, string> = new Map();
+
     constructor(public self:any, public nodeList: Array<string>,
                 public edgeList: Array<string>, public sources: Array<string>, 
                 public boundaryEvents: Array<string>) {}

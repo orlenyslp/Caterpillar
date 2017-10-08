@@ -2,15 +2,15 @@ import { Router } from 'express';
 import * as solc from 'solc';
 import * as Web3 from 'web3';
 
-import { serviceStore } from "./models.store";
+import { serviceStore } from './models.store';
 import { OracleInfo } from "./definitions";
 import { ParameterInfo } from "./definitions";
 import { parseOracle } from "./models.parsers";
 
 
 const models: Router = Router();
-//var web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:8545"));
-var web3 = new Web3(new Web3.providers.HttpProvider("http://193.40.11.64:80"));
+var web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:8545"));
+//var web3 = new Web3(new Web3.providers.HttpProvider("http://193.40.11.64:80"));
 
 var assessLoanRiskAddress = '';
 var appraisePropertyAddress = '';
@@ -74,9 +74,10 @@ var loadOracles = () => {
     }
 }
 
-var createOracles = () => {
+var createOracles = (res) => {
     try { 
         loadOracles();
+        var count = 0;
         serviceStore.forEach(serviceInfo => {
             Object.keys(serviceInfo.contract).forEach(entryContract => {
                 console.log('----------------------------------------------------------------------------------------------');
@@ -94,6 +95,8 @@ var createOracles = () => {
                         console.log('----------------------------------------------------------------------------------------------');
                         console.log(`${entryContract.split(":")[0]} CREATED AT ADDRESS `, contract.address.toString());
                         console.log('----------------------------------------------------------------------------------------------');
+                        if (count++ == 2)
+                            res.status(201).send("Done");
                     } 
                 }
             );
@@ -106,7 +109,7 @@ var createOracles = () => {
 
 models.post('/services', (req, res) => {
     try {
-        createOracles();
+        createOracles(res);
     } catch (e) {
         console.log(e);
         res.status(400).send(e);

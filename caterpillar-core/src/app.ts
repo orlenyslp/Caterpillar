@@ -5,7 +5,6 @@ import * as cors from 'cors';
 
 import * as path from 'path';
 import models from './models/models.controller';
-import processes from './processes/processes.controller';
 
 const app: express.Express = express();
 
@@ -17,7 +16,6 @@ app.use(cors());
 app.use(bodyParser.urlencoded({ extended: false }));
 
 app.use('/', models);
-app.use('/processes', processes);
 
 // catch 404 and forward to error handler
 app.use((req, res, next) => {

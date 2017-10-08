@@ -7,12 +7,10 @@ contract <%= nodeName(processId()) %>_WorkList {
         function (uint<%= getParameterType(nodeId, true) %>) external returns (bool) callback;    
     }
     <%= nodeName(nodeId) %>_Request [] <%= nodeName(nodeId) %>_requests;
-    event <%= nodeName(nodeId) %>_Requested(uint);
 
     function <%= nodeName(nodeId) %>_start (function (uint<%= getParameterType(nodeId, true) %>) external returns (bool) callback) returns (uint) {
         uint index = <%= nodeName(nodeId) %>_requests.length;
         <%= nodeName(nodeId) %>_requests.push(<%= nodeName(nodeId) %>_Request(callback));
-        <%= nodeName(nodeId) %>_Requested(index);
         return index;
     }
     

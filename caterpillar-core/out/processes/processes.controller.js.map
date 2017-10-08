@@ -1,1 +1,0 @@
-{"version":3,"file":"processes.controller.js","sourceRoot":"","sources":["../../src/processes/processes.controller.ts"],"names":[],"mappings":";;AAAA,mCAAiC;AAEjC,IAAM,SAAS,GAAU,gBAAM,EAAE,CAAC;AAElC,4BAA4B;AAC5B,SAAS,CAAC,GAAG,CAAC,GAAG,EAAE,UAAS,GAAG,EAAE,GAAG,EAAE,IAAI;IACxC,GAAG,CAAC,IAAI,CAAC,yBAAyB,CAAC,CAAC;AACtC,CAAC,CAAC,CAAC;AAEH,kBAAe,SAAS,CAAC"}
