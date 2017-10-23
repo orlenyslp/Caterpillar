@@ -4,7 +4,7 @@ import "<%= nodeName(nodeId) %>";
 <% if(oracleTaskMap.size > 0) { -%>
 contract Oracle_Wrapper {
 <% oracleTaskMap.forEach((oracleKey, nodeId, map) => { -%>
-        function <%= getOracleFunction(nodeId) %> (<%= typeParameters(nodeId, true, false) %>, function (uint reqId<%= typeParameters(nodeId, false, true) %>) external returns (bool)) external returns (uint);
+    function <%= getOracleFunction(nodeId) %> (<%= typeParameters(nodeId, true, false) %>, function (uint<%= typeParameters(nodeId, false, true) %>) external returns (bool)) external returns (uint);
 <% }) -%>
 }  
 <% } -%>

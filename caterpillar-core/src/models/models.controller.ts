@@ -1,3 +1,4 @@
+import { workers } from 'cluster';
 import { Router } from 'express';
 import * as solc from 'solc';
 import * as Web3 from 'web3';
@@ -87,27 +88,37 @@ web3.eth.filter("latest", function (error, result) {
     }
 });
 
-var oracleAddresses: Map<string, string> = new Map();
-
-
 models.get('/processes', (req, res, next) => {
     console.log('QUERYING ALL ACTIVE CONTRACTS');
     var actives = [];
-     instances.forEach((dataList, addr, map) => {
-         console.log({name: dataList[0], address: addr });
-         actives.push({name: dataList[0], address: addr });
+    instances.forEach((dataList, addr, map) => {
+        console.log({ id: dataList[1].name, name: dataList[1].entryContractName, contractName: dataList[0], address: addr });
+        actives.push({ id: dataList[1].name, name: dataList[1].entryContractName, contractName: dataList[0], address: addr });
     });
     console.log('----------------------------------------------------------------------------------------------');
-  if (actives.length > 0 ) {
-      res.status(200).send(actives);
-  } else
-      res.status(200).send(['No Contracts Available']);
+    if (actives.length > 0) {
+        res.status(200).send(actives);
+    } else {
+        console.log('No Contracts Available');
+        res.status(200).send([]);
+    }
+});
+
+models.get('/models', (req, res, next) => {
+    console.log('QUERING REGISTERED MODELS');
+    var actives = [];
+    modelStore.forEach((modelInfo, modelId, map) => {
+        console.log(modelInfo.entryContractName);
+        actives.push({id: modelId, name: modelInfo.entryContractName, bpmn: modelInfo.bpmn, solidity: modelInfo.solidity});
+    });
+    console.log('----------------------------------------------------------------------------------------------');
+    res.send(actives);
 });
 
 models.post('/models', (req, res, next) => {
     let modelInfo: ModelInfo = req.body as ModelInfo;
     try {
-        let cont = parseModel(modelInfo, oracleAddresses);
+        let cont = parseModel(modelInfo);
         cont.then(() => {
 
             let input = {};
@@ -137,7 +148,7 @@ models.post('/models', (req, res, next) => {
             console.log('----------------------------------------------------------------------------------------------');
 
             let output = solc.compile({ sources: input }, 1);
-            if(Object.keys(output.contracts).length === 0) {
+            if (Object.keys(output.contracts).length === 0) {
                 res.status(400).send('COMPILATION ERROR IN SMART CONTRACTS');
                 console.log('COMPILATION ERROR IN SMART CONTRACTS');
                 console.log('----------------------------------------------------------------------------------------------');
@@ -150,7 +161,10 @@ models.post('/models', (req, res, next) => {
             })
             modelInfo.contracts = output.contracts;
             modelStore.set(modelInfo.name, modelInfo);
-            res.status(201).send(modelInfo);
+            res.status(201).send({ id: modelInfo.name,
+                                   name: modelInfo.entryContractName, 
+                                   bpmn: modelInfo.bpmn, 
+                                   solidity: modelInfo.solidity });
             console.log('PROCESSED SUCCESSFULLY');
             console.log('----------------------------------------------------------------------------------------------');
         });
@@ -274,12 +288,12 @@ var computeActivation = function (contractAddress) {
                             workListInstances.set(mWorkListAddress, addr);
                             workListRealAddress.set(mWorkListAddress, mInstance.getWorkListAddress.call());
                         }
-                        hrefList.push(`/processes/${addr}`);
+                        hrefList.push(`${addr}`);
                     }
                 externalItemGroupList.push({ elementId: nodeId, hrefs: hrefList });
             } else {
                 var reqIds = instance.getTaskRequestIndex.call(1 << index).toString(2).split('').reverse();
-                
+
                 for (let i = 0; i < reqIds.length; i++) {
                     validExecution = true;
                     if (reqIds[i] === '1') {
@@ -293,7 +307,7 @@ var computeActivation = function (contractAddress) {
 
             }
         }
-    activation =  instance.getRunningFlowNodes.call();
+    activation = instance.getRunningFlowNodes.call();
     activationAsString = activation.toString(2).split('').reverse();
     for (var index = 0; index < activationAsString.length; index++)
         if (activationAsString[index] === '1') {
@@ -368,9 +382,11 @@ models.get('/processes/:procId', (req, res) => {
     if (instances.has(contractAddress)) {
         enabledTasks = new Map();
         let [workItemList, externalItemGroupList] = computeExtendedActivation(contractAddress);
+        console.log("External ", externalItemGroupList);
         let [contractName, modelInfo] = instances.get(contractAddress);
-        console.log("CHECKING STARTED USER ELEMENTS ", workItemList.length == 0 ? "Empty" : "..........");
-        workItemList.forEach(elem => {
+        console.log("CHECKING STARTED ELEMENTS ", workItemList.length == 0 && externalItemGroupList.length == 0 ? "Empty" : "..........");
+        let toDraw = workItemList.concat(externalItemGroupList) 
+        toDraw.forEach(elem => {
             enabledTasks.set(elem.elementId, contractAddress);
             console.log("Element ID: ", elem.elementId);
             console.log("Input Parameters: ", elem.input);
@@ -378,7 +394,6 @@ models.get('/processes/:procId', (req, res) => {
             console.log("hrefs: ", elem.hrefs);
             console.log("...............................................................")
         })
-        //console.log('External Item Groups:', externalItemGroupList);
         if (workItemList.length == 0 && externalItemGroupList.length == 0) {
             if (instances.has(contractAddress)) {
                 instances.delete(contractAddress);
@@ -426,7 +441,7 @@ models.post('/workitems/:workListAddress/:reqId', (req, res) => {
         console.log('----------------------------------------------------------------------------------------------');
         res.status(201).send(result);
     } else
-         res.status(404).send('Invalid Execution');
+        res.status(404).send('Invalid Execution');
 });
 
 

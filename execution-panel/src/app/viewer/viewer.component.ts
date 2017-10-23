@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 import { Http } from '@angular/http';
 import * as Viewer from 'bpmn-js/lib/Viewer';
 
@@ -6,6 +7,7 @@ import * as Viewer from 'bpmn-js/lib/Viewer';
 import { Observable } from 'rxjs/Observable';
 import * as io from 'socket.io-client';
 import { element } from 'protractor';
+import { ProcessStorage } from '../data-store/data-store';
 /////////////////// End /////////////////////////
 
 declare function require(name: string);
@@ -15,12 +17,12 @@ const href_list_as_dropdown_menu = require('ejs-compiled-loader!./href-list-as-d
 
 @Component({
   selector: 'viewer',
+  styleUrls: ['./viewer.component.css'],
   template: `
-       <button (click)="updateContracts()"> Refresh </button>
-       <select [(ngModel)]="url">
+       <select class="btn btn-default navbar-btn" [(ngModel)]="url">
           <option *ngFor="let x of activeContracts" [value]="x">{{x}}</option>
        </select>
-       <button (click)="loadModel()"> Go </button>
+       <button class="btn btn-default navbar-btn" (click)="loadModel()"> Go </button>
        <div id="canvas"></div>
   `
 })
@@ -42,9 +44,21 @@ export class ViewerComponent implements OnInit {
 
   ////////////////////// End /////////////////////////
 
-  constructor(private http: Http) { }
+  constructor(private router: Router, private http: Http, private processStorage: ProcessStorage) {
+     const instances = processStorage.getInstance(processStorage.modelId);
+     this.activeContracts = [];
+     instances.forEach(element => {
+       this.activeContracts.push('http://localhost:3000/processes/' + element);
+     });
+     if (this.activeContracts.length === 0) {
+       this.activeContracts.push('No Contracts Available');
+       this.url = 'No Contracts Available';
+     } else {
+       this.url = 'http://localhost:3000/processes/' + processStorage.actInst;
+     }
+  }
   loadModel() {
-     if (this.url !== 'No Contracts Available') {
+    if (this.url !== 'No Contracts Available' && this.url !== '') {
       this.http.get(this.url)
         .subscribe(resp =>
           this.viewer.importXML(resp.json().bpmn, (definitions) => {
@@ -53,30 +67,19 @@ export class ViewerComponent implements OnInit {
         );
     }
 
-    ////////////////////////// Start ///////////////////////////////////
-    // this.socket.emit('add-message', this.message);
-    // console.log("MESSAGE SENT");
-    ////////////////////////// End /////////////////////////////////////
   }
 
   updateContracts() {
-    this.http.get('http://localhost:3000/processes')
-      .subscribe(resp => {
-        this.activeContracts = [];
-        this.url = 'No Contracts Available';
-        resp.json().forEach(element => {
-          if (element.address && this.activeContracts.indexOf(element.address) < 0) {
-            this.url = 'http://localhost:3000/processes/' + element.address;
-            this.activeContracts.push(this.url);
-          } else {
-            this.url = element;
-            this.activeContracts.push(element);
-          }
-        });
-        if (this.activeContracts.length > 1 && this.activeContracts[0] === 'No Contracts Available') {
-          this.activeContracts.splice(0, 1);
-        }
-      });
+    this.processStorage.updateInstances(this.processStorage.modelId);
+    const res = this.processStorage.getInstance(this.processStorage.modelId);
+    this.activeContracts = ['No Contracts Available'];
+    res.forEach(element => {
+        this.url = 'http://localhost:3000/processes/' + element;
+        this.activeContracts.push(this.url);
+    });
+    if (this.activeContracts.length > 1 && this.activeContracts[0] === 'No Contracts Available') {
+      this.activeContracts.splice(0, 1);
+    }
   }
 
   renderState(state: any) {
@@ -108,7 +111,7 @@ export class ViewerComponent implements OnInit {
     const eventBus = this.viewer.get('eventBus');
     const overlays = this.viewer.get('overlays');
     eventBus.on('element.click', (e: any) => {
-      let nodeId = -1;
+      let nodeId = e.element.id;
       let workItem = undefined;
       if (this.previousState) {
         this.previousState.workItems.forEach(workItem1 => {
@@ -145,9 +148,9 @@ export class ViewerComponent implements OnInit {
                     });
                   });
                   this.http.post('http://localhost:3000' + workItem.hrefs[0], { elementId: workItem.elementId, inputParameters: values })
-                    .subscribe(resp => this.http.get(this.url).subscribe(resp => this.renderState(resp.json())));
+                    .subscribe(resp => this.http.get(this.url).subscribe(resp1 => this.renderState(resp1.json())));
                 });
-              overlayHtml.find(`#${workItem.elementId}_cancel`).click((e: any) => {
+              overlayHtml.find(`#${workItem.elementId}_cancel`).click((e1: any) => {
                 overlays.remove({ element: workItem.elementId });
               });
             }
@@ -162,44 +165,47 @@ export class ViewerComponent implements OnInit {
           if (toDisplay.length > 0) {
             const overlayHtml = jQuery(href_list_as_dropdown_menu({ nodeId: nodeId, hrefList: toDisplay }));
             overlays.add(nodeId, { position: { bottom: 0, right: 0 }, html: overlayHtml });
-            overlayHtml.click((e: any) => {
-              const nodeId1 = e.target.id.split(';')[0];
-              const href = e.target.text;
+            overlayHtml.click((e1: any) => {
+              const nodeId1 = e1.target.id.split(';')[0];
+              const href = e1.target.text;
               overlays.remove({ element: nodeId1 });
               this.canvas.removeMarker(nodeId1, 'highlight');
               this.canvas.addMarker(nodeId1, 'highlight-running');
               const values: Array<any> = [];
               this.http.post('http://localhost:3000' + href, { elementId: workItem.elementId, inputParameters: values })
-                .subscribe(resp => this.http.get(this.url).subscribe(resp => this.renderState(resp.json())));
+                .subscribe(resp => this.http.get(this.url).subscribe(resp1 => this.renderState(resp1.json())));
             });
             overlayHtml.toggle();
           }
         }
-        this.previousState.externalItemGroupList.forEach(externalItemGroup => {
-          if (externalItemGroup.elementId === nodeId) {
-            const toDisplay = [];
-            for (let i = 0; i < externalItemGroup.status.length; i++) {
-              if (externalItemGroup.status[i] === 'started') {
-                toDisplay.push(externalItemGroup.hrefs[i]);
-              }
-            }
-            if (toDisplay.length > 0) {
-              const overlayHtml = jQuery(href_list_as_dropdown_menu({ nodeId: nodeId, hrefList: toDisplay }));
-              overlays.add(nodeId, { position: { bottom: 0, right: 0 }, html: overlayHtml });
-              overlayHtml.toggle();
+      }
+      this.previousState.externalItemGroupList.forEach(externalItemGroup => {
+        if (externalItemGroup.elementId === nodeId) {
+          const toDisplay = [];
+          for (let i = 0; i < externalItemGroup.status.length; i++) {
+            if (externalItemGroup.status[i] === 'started') {
+              toDisplay.push(externalItemGroup.hrefs[i]);
             }
           }
-        });
-
-
-      }
+          if (toDisplay.length > 0) {
+            const overlayHtml = jQuery(href_list_as_dropdown_menu({ nodeId: nodeId, hrefList: toDisplay }));
+            overlays.add(nodeId, { position: { bottom: 0, right: 0 }, html: overlayHtml });
+            overlayHtml.click((e1: any) => {
+              // this.processStorage.modelId = e.element.businessObject.name;
+              // this.processStorage.actInst = e1.target.innerText;
+              // this.router.navigateByUrl('/viewer');
+            });
+            overlayHtml.toggle();
+          }
+        }
+      });
     });
   }
 
   ngOnInit(): void {
     this.viewer = new Viewer({ container: '#canvas' });
     this.canvas = this.viewer.get('canvas');
-    this.activeContracts = ['No Contracts Available'];
+    this.updateContracts();
     this.setupListeners();
 
     /////////////////////////// Start //////////////////////////////////////
@@ -229,6 +235,7 @@ export class ViewerComponent implements OnInit {
   }
 
 
+  // tslint:disable-next-line:use-life-cycle-interface
   ngOnDestroy() {
     this.connection.unsubscribe();
   }

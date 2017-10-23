@@ -23,6 +23,7 @@
         "../node_modules/bootstrap/dist/css/bootstrap.min.css",
         "../node_modules/bpmn-js/assets/bpmn-font/css/bpmn.css",
         "../node_modules/bpmn-js/assets/bpmn-font/css/bpmn-embedded.css",
+        "../node_modules/bpmn-js-properties-panel/styles/properties.less",
         "../node_modules/diagram-js/assets/diagram-js.css"
       ],
       "scripts": [

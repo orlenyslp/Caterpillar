@@ -9,7 +9,7 @@
   fill: sandybrown !important; /* color elements as green */
 }
 
-#canvas {
-    width: 100%;
-    height: 800px;
+div.input-params {
+  min-width: 400px;
 }
+

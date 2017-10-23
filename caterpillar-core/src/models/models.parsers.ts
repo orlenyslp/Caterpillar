@@ -57,9 +57,6 @@ let collectControlFlowInfo = (proc: any, globalNodeMap: Map<string, any>,
     nodeList = nodeList.filter((node: string) => sources.indexOf(node) < 0);
 
     if (nonBlockingBoundaryEvents.length > 0) {
-        console.log('--------------------------------------------------------------');
-        console.log('Will partition the graph due to presence of non-blocking boundary events');
-        console.log('--------------------------------------------------------------');
         let dfs = (sources: string[]) => {
             let open = [...sources];
             let nodeList: Array<string> = new Array();
@@ -208,7 +205,7 @@ let getNodeName = (node: any) => node.name ? node.name.replace(/\s+/g, '_') : no
 
 
 
-export let parseModel = (modelInfo: ModelInfo, oracleAddresses: Map<string, string>) => new Promise((resolve, reject) => {
+export let parseModel = (modelInfo: ModelInfo) => new Promise((resolve, reject) => {
     parseBpmn(modelInfo.bpmn).then((definitions: any) => {
         modelInfo.solidity = 'pragma solidity ^0.4.14;\n';
         modelInfo.controlFlowInfoMap = new Map();
