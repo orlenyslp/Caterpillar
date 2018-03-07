@@ -1,0 +1,15 @@
+/* You can add global styles to this file, and also import other style files */
+.highlight:not(.djs-connection) .djs-visual > :nth-child(1) {
+  fill: green !important; /* color elements as green */
+}
+.highlight-running:not(.djs-connection) .djs-visual > :nth-child(1) {
+  fill: lightgreen !important; /* color elements as green */
+}
+.highlight-external:not(.djs-connection) .djs-visual > :nth-child(1) {
+  fill: sandybrown !important; /* color elements as green */
+}
+
+div.input-params {
+  min-width: 400px;
+}
+

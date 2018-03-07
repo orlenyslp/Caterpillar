@@ -1,0 +1,22 @@
+<div class="well input-params">
+<% inputs.forEach( function (input) {
+    if (input.type.match(/^uint\d*$/)) { %>
+  <div class="form-group">
+    <label><%= input.name %>:</label>
+    <input type="number" class="form-control" value="" id="<%= input.name %>">
+  </div>
+<%  } else if (input.type === 'bool') { %>
+  <div class="form-group">
+    <label><%= input.name %>:</label>
+    <input type="checkbox" class="form-control" id="<%= input.name %>">
+  </div>
+<%  } else { %>
+  <div class="form-group">
+    <label for="<%= input.name %>"><%= input.name %>:</label>
+    <input type="text" class="form-control" id="<%= input.name %>">
+  </div>
+<% }}) %>
+
+    <button type="button" class="btn btn-default" id="<%= nodeId %>_save">Save</button>
+    <button type="button" class="btn btn-default" id="<%= nodeId %>_cancel">Cancel</button>
+</div>

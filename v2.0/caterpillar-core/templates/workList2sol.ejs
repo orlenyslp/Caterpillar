@@ -1,0 +1,70 @@
+pragma solidity ^0.4.18;
+
+contract <%= nodeName(processId()) %>_AbstractWorlist {
+
+  <%  groupedIds = getWorkItemsGroupByParameters(true);
+      groupedIds.forEach(idGroup => {
+          var nodeId = idGroup[0]; -%>
+    function <%= nodeName(nodeId) %>_start(uint<%= getParameterType(nodeId, true, true, true) %>) external;
+  <% }) -%>
+
+  <%  groupedIds = getWorkItemsGroupByParameters(false);
+      groupedIds.forEach(idGroup => {
+          var nodeId = idGroup[0]; -%>
+    function <%= nodeName(nodeId) %>_complete(uint<%= getParameterType(nodeId, false, true, true) %>) external;
+  <% }) -%>
+
+}
+
+contract <%= nodeName(processId()) %>_Worklist {
+
+    struct Workitem {
+        uint elementIndex;
+        address processInstanceAddr;
+    }
+    Workitem[] private workitems;
+
+    // Events with the information to include in the Log when a workitem is registered
+<%  groupedIds = getWorkItemsGroupByParameters(true);
+    groupedIds.forEach(idGroup => { -%>
+    event <%= nodeName(idGroup[0]) %>_Requested(uint<%= getParameterType(idGroup[0], true, true, true) %>);
+<% }) -%>
+
+    function workItemsFor(uint elementIndex, address processInstance) external view returns(uint) {
+        uint reqIndex = 0;
+        for(uint i = 0; i < workitems.length; i++)
+            if(workitems[i].elementIndex == elementIndex && workitems[i].processInstanceAddr == processInstance)
+                reqIndex |= uint(1) << i;
+        return reqIndex;
+    }
+
+    function processInstanceFor(uint workitemId) public returns(address) {
+        require(workitemId < workitems.length);
+        return workitems[workitemId].processInstanceAddr;
+    }
+
+    function elementIndexFor(uint workitemId) public returns(uint) {
+        require(workitemId < workitems.length);
+        return workitems[workitemId].elementIndex;
+    }
+
+<%  groupedIds = getWorkItemsGroupByParameters(true);
+    groupedIds.forEach(idGroup => {
+        var nodeId = idGroup[0]; -%>
+    function <%= nodeName(nodeId) %>_start(uint elementIndex<%= getParameters(nodeId, true, true, true) %>) external {
+        workitems.push(Workitem(elementIndex, msg.sender));
+        <%= nodeName(nodeId) %>_Requested(workitems.length - 1<%= getParameters(nodeId, true, false, true) %>);
+    }
+<% }) -%>
+
+<%  groupedIds = getWorkItemsGroupByParameters(false);
+    groupedIds.forEach(idGroup => {
+        var nodeId = idGroup[0]; -%>
+    function <%= nodeName(nodeId) %>(uint workitemId<%= getParameters(nodeId, false, true, true) %>) external {
+        require(workitemId < workitems.length && workitems[workitemId].processInstanceAddr != address(0));
+        <%= nodeName(processId()) %>_AbstractWorlist(workitems[workitemId].processInstanceAddr).<%= nodeName(nodeId) %>_complete(workitems[workitemId].elementIndex<%= getParameters(nodeId, false, false, true) %>);
+        workitems[workitemId].processInstanceAddr = address(0);
+    }
+<% }) -%>
+
+}
