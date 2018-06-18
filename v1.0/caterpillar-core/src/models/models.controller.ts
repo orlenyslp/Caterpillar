@@ -364,6 +364,24 @@ models.post('/models/:modelId', (req, res) => {
                     var workListAdr = contract.getWorkListAddress.call().toString();
                     workListInstances.set(workListAdr, contract.address.toString());
                     workListRealAddress.set(workListAdr, contract.getWorkListAddress.call());
+                    contract.allEvents(
+                        {fromBlock: 0},
+                        function(error,event){
+                            console.log('==============================================================================================');
+                            console.log("RECEIVED EVENT FROM CONTRACT AT ADDRESS: ", contract.address.toString());
+                            console.log('----------------------------------------------------------------------------------------------');
+                            console.log(event);
+                            console.log('----------------------------------------------------------------------------------------------');
+                            console.log("Resolved args:");
+                            for(var key in event.args){
+                                if (event.args[key] instanceof BigNumber) 
+                                    console.log(key, ": ", event.args[key].toNumber());
+                                else
+                                    console.log(key, ": ", event.args[key]);
+                            }
+                            console.log('==============================================================================================');
+                        }
+                    )
                     console.log('CONTRACT CREATED !!! AT ADDRESS: ', contract.address.toString());
                     console.log('WORKITEMS ADDRESS: ', contract.getWorkListAddress.call());
                     console.log('----------------------------------------------------------------------------------------------');
