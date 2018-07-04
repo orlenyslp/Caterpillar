@@ -45,7 +45,7 @@ contract <%= nodeName(processId()) %>_Contract {
 <%    oracleTaskMap.forEach((oracleKey, nodeId, map) => { -%>
     uint active_<%= nodeName(nodeId) %> = 0;    
 <% })} -%>
-    <%= globalDeclarations() -%>
+    <%- globalDeclarations() -%>
 
     function <%= nodeName(processId()) %>_Contract() {
         owner = msg.sender;
