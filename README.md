@@ -15,13 +15,13 @@ Caterpillar’s code distribution in this repository contains three different fo
 
 For running Caterpillar locally, download the source code from the repository and follow the next steps to set up the applications and install the required dependencies. For running caterpillar from a Docker image go directly to the last section of this document. Be aware that the Docker image works only on the version v1.0.
 
-## Installing testrpc
+## Installing Ganache CLI
 
-By default, the core of Caterpillar was configured to run on top of TestRPC which is a Node.js based Ethereum client for testing and development. It uses ethereumjs to simulate full client behavior and make developing Ethereum applications. All the instructions about the installation can be found here: https://github.com/trufflesuite/ganache-cli/. However, the Ethereum Provider can be updated at the beginning of the source code in the controller "caterpillar-core/src/models/models.controller.ts" (check the comments).
+By default, the core of Caterpillar was configured to run on top of Ganache CLI which is a Node.js based Ethereum client for testing and development. It uses ethereumjs to simulate full client behavior and make developing Ethereum applications. All the instructions about the installation can be found here: https://github.com/trufflesuite/ganache-cli/. However, the Ethereum Provider can be updated at the beginning of the source code in the controller "caterpillar-core/src/models/models.controller.ts" (check the comments).
 
-Nothe that, ganache-cli is written in Javascript and distributed as a Node package via npm. Make sure you have Node.js (>= v6.11.5) installed. Besides, be aware to start the testrpc server before running the applications Caterpillar Core and Services Manager. In that respect, you only need to open a terminal on your computer and run the command:
+Note that Ganache CLI is written in Javascript and distributed as a Node package via npm. Make sure you have Node.js (>= v6.11.5) installed. Besides, be aware to start the Ganache CLI server before running the applications Caterpillar Core and Services Manager. In that respect, you only need to open a terminal on your computer and run the command:
 
-     testrpc
+     ganache-cli
 
 ## How to use Caterpillar Core
 
@@ -43,7 +43,7 @@ For running the application you may use one of the following commands
 
 By default the application runs on http://localhost:3000.
 
-> Make sure you have testrpc running in your computer before starting the core. Besides, if you are using the version v2.0 a MongoDB client must be also running.
+> Make sure you have Ganache Cli running in your computer before starting the core. Besides, if you are using the version v2.0 a MongoDB client must be also running.
 
 The application provides a REST API to interact with the core of Caterpillar. The following table summarizes the mapping of resource-related actions:
 

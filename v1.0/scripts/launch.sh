@@ -1,5 +1,5 @@
 #/usr/bin/sh
-nohup testrpc &
+nohup ganache-cli &
 cd /usr/caterpillar/services-manager;node ./out/www.js&
 sleep 5s
 cd /usr/caterpillar/services-manager;node oracle_creation.js&
