@@ -3,7 +3,7 @@ WORKDIR /usr/caterpillar
 EXPOSE 3000
 EXPOSE 3010
 EXPOSE 3200
-RUN npm install -g ethereumjs-testrpc gulp-cli httpserver @angular/cli@1.0.0
+RUN npm install -g ganache-cli gulp-cli httpserver @angular/cli@1.0.0
 COPY caterpillar-core caterpillar-core
 COPY execution-panel execution-panel
 COPY services-manager services-manager
