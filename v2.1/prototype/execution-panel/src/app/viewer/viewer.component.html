@@ -1,0 +1,6 @@
+<select class="btn btn-default navbar-btn" [(ngModel)]="url">
+   <option *ngFor="let x of activeContracts" [value]="x">{{x}}</option>
+</select>
+<button class="btn btn-default navbar-btn" (click)="loadModel()"> Display Model </button>
+<button class="btn btn-default navbar-btn" (click)="goToDashborad()"> Go to Dashboard </button>
+<div id="canvas"></div>

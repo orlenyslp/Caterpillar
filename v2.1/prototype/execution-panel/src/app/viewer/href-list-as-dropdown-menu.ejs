@@ -1,0 +1,5 @@
+<ul class="dropdown-menu" role="menu" aria-labelledby="menu1">
+<% hrefList.forEach( function (href, index, array) { %>
+    <li role="presentation"><a role="menuitem" id="<%= nodeId %>;<%= index %>"><%= href %></a></li>
+<% }) -%>
+</ul>

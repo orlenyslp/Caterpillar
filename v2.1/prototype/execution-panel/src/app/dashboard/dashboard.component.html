@@ -1,0 +1,287 @@
+
+
+<div class="container-fluid">
+  <div class="navbar-header">
+
+  </div>
+  <div class="panel-group">
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <h4 class="panel-title">
+                <a data-toggle="collapse" href="#collapse1"> <strong> Configuration: Process Runtime Registry Operations </strong> </a>
+            </h4>
+        </div>
+        <div id="collapse1" class="panel-collapse collapse">
+            <div class="panel-body">
+                <div class="row">
+                  <div class="col-lg-2">
+                    <button class="btn btn-success" (click)="createProcessRegistry()"> Create Registry </button>
+                  </div>
+                  <div class="col-lg-5">
+                    <div class="input-group">
+                      <span class="input-group-btn">
+                        <button class="btn btn-primary" type="button">Load Registry From </button>
+                      </span>
+                      <input type="text" class="form-control" [(ngModel)]="registryAddress" placeholder="Registry address">
+                    </div><!-- /input-group -->
+                  </div><!-- /.col-lg-6 -->
+                </div>
+              </div>
+        </div>
+    </div>
+
+    <div class="panel panel-default">
+            <div class="panel-heading">
+                <h4 class="panel-title">
+                    <a data-toggle="collapse" href="#collapse2"> <strong> Binding Policy: Static Configuration </strong> </a>
+                </h4>
+            </div>
+            <div id="collapse2" class="panel-collapse collapse">
+                <div class="panel-body">
+                    <div class="row">
+                        <div class="col-lg-4">
+                          <div class="input-group">
+                              <span class="input-group-btn">
+                                <button class="btn btn-success" (click)="sendResourceModel()"> Deploy Binding Policy </button>
+                              </span>
+                              <input type='file' class="btn btn-info" single (change)='openFile($event)'>
+                          </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-lg-8">
+                          <label for="comment">Binding Policy to Deploy:</label>
+                          <textarea class="form-control" rows="6" [(ngModel)]="bindingPolicy"></textarea>
+                         </div>
+                    </div>
+                    <div class="row">
+                      <hr>
+                      <div class="col-lg-5">
+                          <div class="input-group">
+                              <span class="input-group-btn">
+                                <button type="submit" class="btn btn-success" (click)="createTaskRole()"> Deploy TaskRoleMap From </button>
+                              </span>
+                              <input type="text" class="form-control" [(ngModel)]="rootProcess" placeholder="Process ID in Repository">
+                          </div><!-- /input-group -->
+                      </div>
+                    </div>
+                  </div>
+            </div>
+      </div>
+
+      <div class="panel panel-default">
+              <div class="panel-heading">
+                  <h4 class="panel-title">
+                      <a data-toggle="collapse" href="#collapse3"><strong>Binding Policy: Runtime Operations</strong></a>
+                  </h4>
+              </div>
+              <div id="collapse3" class="panel-collapse collapse">
+                  <div class="panel-body">
+                    <div class="row">
+                        <hr>
+                        <div class="col-lg-2">
+                            <input type="text" class="form-control" [(ngModel)]="roleToQuery" placeholder="Role Name">
+                        </div>
+                        <div class="col-lg-3"> 
+                          <input type="text" class="form-control" [(ngModel)]="pCaseQuery" placeholder="Process Case To Query">
+                        </div>
+                        <div class="col-lg-2">
+                            <button type="submit" class="btn btn-info" (click)="findRoleState()"> Find Role Binding State </button>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <hr>
+                          <div class="col-lg-3">
+                            <input type="text" class="form-control" [(ngModel)]="nominatorRole" placeholder="Nominator Role">
+                          </div>
+                          <div class="col-lg-3">
+                            <input type="text" class="form-control" [(ngModel)]="nomineeRole" placeholder="Nominee Role">
+                          </div>
+                          <div class="col-lg-3">
+                            <input type="text" class="form-control" [(ngModel)]="procesCase" placeholder="Process Case">
+                          </div>
+                      </div>
+                      <div class="row">
+                          <hr>
+                        </div>
+                      <div class="row">
+                          <div class="container-fluid">
+                            <div class="panel panel-success">
+                                <div class="panel-heading"> Nomination </div>
+                                <div class="panel-body">
+                                    <div class="col-lg-3">
+                                      <input type="text" class="form-control" [(ngModel)]="nominatorNAddress" placeholder="Nominator Address">
+                                    </div>
+                                    <div class="col-lg-3">
+                                      <input type="text" class="form-control" [(ngModel)]="nomineeNAddress" placeholder="Nominee Address">
+                                    </div>
+                                    <div class="col-lg-3">
+                                        <button type="submit" class="btn btn-success" (click)="nominate()"> Nominate </button>
+                                    </div>
+                                </div>
+                            </div>
+                          </div>
+                      </div>
+                      <div class="row">
+                          <div class="container-fluid">
+                            <div class="panel panel-danger">
+                                <div class="panel-heading"> Release </div>
+                                <div class="panel-body">
+                                    <div class="col-lg-3">
+                                      <input type="text" class="form-control" [(ngModel)]="nominatorRAddress" placeholder="Releaser Address">
+                                    </div>
+                                    <div class="col-lg-3">
+                                        <button type="submit" class="btn btn-danger" (click)="release()"> Release </button>
+                                    </div>
+                                </div>
+                            </div>
+                          </div>
+                      </div>
+                      <div class="row">
+                          <div class="container-fluid">
+                            <div class="panel panel-warning">
+                                <div class="panel-heading"> Vote </div>
+                                <div class="panel-body">
+                                    <div class="col-lg-3">
+                                      <input type="text" class="form-control" [(ngModel)]="endorserRole" placeholder="Endorser Role">
+                                    </div>
+                                    <div class="col-lg-3">
+                                      <input type="text" class="form-control" [(ngModel)]="endorserAddress" placeholder="Endorser Address">
+                                    </div>
+                                    <div class="col-lg-3">
+                                      <span class="border">
+                                        <label class="radio-inline">
+                                          <input type="radio" name="R1" [(ngModel)]="onNomination" value="true" > 
+                                            On-nomination
+                                        </label>
+                                        <label class="radio-inline">
+                                          <input type="radio" name="R1" [(ngModel)]="onNomination" value="false"> 
+                                          On-release
+                                        </label>
+                                      </span>
+                                    </div>
+                                    <div class="col-lg-2">
+                                        <span class="border">
+                                          <label class="radio-inline">
+                                            <input type="radio" name="R2" [(ngModel)]="isAccepted" value="true"> 
+                                            Accept
+                                          </label>
+                                          <label class="radio-inline">
+                                            <input type="radio" name="R2" [(ngModel)]="isAccepted" value="false"> 
+                                            Reject
+                                          </label>
+                                        </span>
+                                    </div>
+                                    <div class="col-lg-1">
+                                        <button type="submit" class="btn btn-warning" (click)="vote()"> Vote </button>
+                                    </div>
+                                </div>
+                            </div>
+                          </div>
+                      </div>
+                    </div>
+
+              </div>
+
+     </div>
+
+      <div class="panel panel-default">
+        <div class="panel-heading">
+            <h4 class="panel-title">
+                <a data-toggle="collapse" href="#collapse4"> <strong> Business Process Operations </strong> </a>
+            </h4>
+        </div>
+        
+        <div id="collapse4" class="panel-collapse collapse">
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-lg-2">
+                        <button class="btn btn-success" (click)="openModeler()"> Add Process Model </button>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="input-group">
+                            <span class="input-group-btn">
+                                <button type="submit" class="btn btn-info" (click)="searchElement()"> Search Models </button>
+                            </span>
+                            <input type="text" class="form-control" [(ngModel)]="toSearch" placeholder="Search">
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <hr>
+                </div>
+                <div class="row">
+                    <div class="col-lg-1">
+                        <span class="label label-info"> Process Models List => </span>
+                    </div>
+                    <div class="col-lg-2">
+                        <input type="text" class="form-control" [(ngModel)]="caseCreatorRole" placeholder="Case Creator Role">
+                    </div>
+                    <div class="col-lg-3">
+                        <input type="text" class="form-control" [(ngModel)]="caseCreator" placeholder="Case Creator Address">
+                    </div>
+                </div>
+                <div class="row">
+                    <hr>
+                </div>
+                <div class="row">
+                    <div id="canvas"></div>
+    
+                    <div>
+                        <div class="panel-group" id="accordion1">
+                          <div class="panel panel-default" *ngFor="let proc of processStorage.processes">
+                            <div class="panel-heading">
+                              <h4 class="panel-title">
+                                <a data-toggle="collapse" data-parent="#accordion1" [attr.href]="'#'+proc.id">{{proc.name}}
+                                </a>
+                                <div class="pull-right">
+                                  <button class="btn btn-success btn-xs" (click)="createInstance(proc.id)"> Create instance</button>
+                                  <button class="btn btn-info btn-xs" (click)="processStorage.updateInstances(proc.id)"> Refresh instances</button>
+                                </div>
+                              </h4>
+                            </div>
+                            <div [attr.id]="proc.id" class="panel-collapse collapse">
+                              <div class="panel-body">
+                                <div class="panel-group" id="accordion21">
+                                  <div class="panel">
+                                    <a data-toggle="collapse" data-parent="#accordion21" [attr.href]="'#'+proc.id+'_solidity'">Solidity &raquo;</a>
+                                    <div [attr.id]="proc.id+'_solidity'" class="panel-collapse collapse">
+                                      <div class="panel-body">
+                                        <div>
+                                          <pre style="max-height: 30em;"><code class="language-javascript" [innerHtml]="getSolidity(proc)"></code></pre>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div class="panel">
+                                    <a data-toggle="collapse" data-parent="#accordion21" [attr.href]="'#'+proc.id+'_instances'">Instances &raquo;</a>
+                                    <div [attr.id]="proc.id+'_instances'" class="panel-collapse collapse in">
+                                      <div class="panel-body">
+                                        <div *ngFor="let instance of processStorage.getInstance(proc.id)" (click)="openViewer(proc.id, instance)">{{instance}}</div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                      </div>
+                </div>      
+            </div>
+          
+        </div>
+
+
+
+
+
+        </div>
+      </div>
+</div>
+
+
+
+
