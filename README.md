@@ -7,11 +7,13 @@ Caterpillar also provides a set of modelling tools and an execution panel which 
 
 The prototype has two versions. We are currently developing the version v2.0, which follows a different approach from v1.0. However, we kept the source code of v1.0 as a reference, although we are not currently working on such an implementation.
 
-The approach implemented by the v2.0 can be accessed from: https://arxiv.org/pdf/1808.03517v1.pdf
+The approach implemented by the v2.0 can be accessed from: https://arxiv.org/abs/1808.03517.
+
+The paper describing the Role Dynamic Binding and Access Control implemented by v2.1 can be accessed from: https://arxiv.org/abs/1812.02909. 
 
 Additionally, a demo paper about v1.0: can be accessed from: http://ceur-ws.org/Vol-1920/BPM_2017_paper_199.pdf
 
-Caterpillar’s code distribution in this repository contains three different folders in v1.0 and two in v2.0. The folder __caterpillar_core__ includes the implementation of the core components, __execution_panel__ consists of the code of a BPMN visualizer that serves to keep track of the execution state of process instances and to lets users check in process data. The __services_manager__ folder contains the implementation for an external service which is used only in v1.0 for demonstration purposes.
+Caterpillar’s code distribution in this repository contains three different folders in v1.0 and two in v2.0. The folder __caterpillar_core__ includes the implementation of the core components, __execution_panel__ consists of the code of a BPMN visualizer that serves to keep track of the execution state of process instances and to lets users check in process data. The __services_manager__ folder contains the implementation for an external service which is used only in v1.0 for demonstration purposes. In v2.1, the source code is in the folder labelled as "prototype". Besides, the folder "Dynamic Binding Example" contains the binding policy and BPMN model used as running example in https://arxiv.org/abs/1812.02909.
 
 For running Caterpillar locally, download the source code from the repository and follow the next steps to set up the applications and install the required dependencies. For running caterpillar from a Docker image go directly to the last section of this document. Be aware that the Docker image works only on the version v1.0.
 
@@ -65,6 +67,26 @@ From the caterpillar_core folder, it is possible to run the script:
      node demo_running_example_test.js
 
 Which is provided only for the version v1.0, to register, create an instance and get the address of a sample process provided in the file __demo_running_example.bpmn__. For running the sample process, it is also required to run first the application __services_manager__ and to register the external services.
+
+### Updates in v2.1
+
+The version v2.1 extends v2.0 with an Access Control mechanism, based on a role dynamic binding policy. Accordingly, the REST API to interact with the core of Caterpillar was extended with the following resource-related actions.
+
+
+| Verb | URI                       | Description                                                                         |
+| -----| ------------------------- | ----------------------------------------------------------------------------------- |
+| POST | /registry                 | Deploys a new instance of the Runtime Registry                                      |
+| POST | /resources/policy         | Generates/Deploys the contracts from a given binding policy specification (BPF)     |
+| POST | /resources/task-role      | Generates/Deploys the contract mapping the roles to the tasks in a given BPMN model |
+| POST | /resources/nominate       | Nominates an actor into a role as defined in the BPF                                |
+| POST | /resources/release        | Releases an actor from a role as defined in the BPF                                 |
+| POST | /resources/vote           | Accepts/Rejects the nomination/release of an actor as defined in the BPF            |
+| GET  | /resources/:role/:pAddr   | Retrieves the current state of an actor into a role in a process instance           |
+
+The grammar describing the Binding Policy Specification can be found at: https://github.com/orlenyslp/Caterpillar/blob/master/v2.1/prototype/caterpillar-core/src/models/dynamic_binding/antlr/binding_grammar.g4.
+
+The full description of the language and Dynamic Role Binding can be found at: https://arxiv.org/abs/1812.02909 
+
 
 ## How to use Services Manager (ONLY FOR v1.0)
 
