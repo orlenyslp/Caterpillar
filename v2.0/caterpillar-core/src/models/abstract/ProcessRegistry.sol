@@ -49,6 +49,10 @@ contract ProcessRegistry {
         return processAddress;
     }
 
+    function childrenFor(bytes32 parent, uint nodeInd) external view returns(bytes32) {
+        return parent2ChildrenBundleId[parent][nodeInd];
+    }
+
     function bundleFor(address processInstance) public returns(bytes32) {
         return instance2Bundle[processInstance];
     }

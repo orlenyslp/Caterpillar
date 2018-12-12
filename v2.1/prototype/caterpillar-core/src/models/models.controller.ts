@@ -119,26 +119,30 @@ let policyInfo = undefined;
 models.get('/processes', (req, res) => {
     console.log('QUERYING ALL ACTIVE CONTRACTS');
     let actives = [];
-    let registeredInstances = processRegistryContract.allInstances.call();
-    registeredInstances.forEach(instance => {
-        let repoID = web3.toAscii(processRegistryContract.bundleFor.call(instance)).toString().substr(0, 24);
-        repoSchema.find({_id: repoID},
-            (err, repoData) => {
-                if (err) {
-                    res.status(404).send([]);
-                    return;
-                } else {
-                  if(repoData.length > 0) {
-                    console.log({id: repoID, name: repoData[0].rootProcessName, address: instance});
-                    actives.push({id: repoID, name: repoData[0].rootProcessName, address: instance});
-                    if (actives.length === registeredInstances.length) {
-                        res.status(200).send(actives);
+    if(processRegistryContract) {
+        let registeredInstances = processRegistryContract.allInstances.call();
+        registeredInstances.forEach(instance => {
+            let repoID = web3.toAscii(processRegistryContract.bundleFor.call(instance)).toString().substr(0, 24);
+            repoSchema.find({_id: repoID},
+                (err, repoData) => {
+                    if (err) {
+                        res.status(404).send([]);
                         return;
+                    } else {
+                    if(repoData.length > 0) {
+                        console.log({id: repoID, name: repoData[0].rootProcessName, address: instance});
+                        actives.push({id: repoID, name: repoData[0].rootProcessName, address: instance});
+                        if (actives.length === registeredInstances.length) {
+                            res.status(200).send(actives);
+                            return;
+                        }
                     }
-                  }
-                }
-            })
-    })
+                    }
+                })
+        })
+     } else {
+        res.status(404).send([]);
+     }
 });
 
 // Querying all registered (root) process in the repository
@@ -146,24 +150,32 @@ models.get('/processes', (req, res) => {
 models.get('/models', (req, res) => {
     console.log('QUERYING REGISTERED MODELS');
     let actives = [];
+    if(processRegistryContract) {
     repoSchema.find({'bpmnModel': {$ne: 'empty'}},
         (err, repoData) => {
             if (err)
                 res.send([]);
             else {
                 repoData.forEach(data => {
-                    console.log({id: data._id, name: data.rootProcessName});
-                    actives.push({
-                        id: data._id,
-                        name: data.rootProcessName,
-                        bpmn: data.bpmnModel,
-                        solidity: data.solidityCode
-                    })
+                    if(web3.toAscii(processRegistryContract.childrenFor(data._id.toString(), 0)).toString().substr(0, 24) === data._id.toString()) {
+                        console.log({id: data._id, name: data.rootProcessName});
+                        actives.push({
+                            id: data._id,
+                            name: data.rootProcessName,
+                            bpmn: data.bpmnModel,
+                            solidity: data.solidityCode
+                        })
+                    }
                 });
+                
                 console.log('----------------------------------------------------------------------------------------------');
                 res.send(actives);
             }
         });
+    } else {
+        res.send([]);
+        console.log('----------------------------------------------------------------------------------------------');
+    }
 });
 
 

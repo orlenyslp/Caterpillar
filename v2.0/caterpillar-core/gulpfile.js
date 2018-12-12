@@ -29,6 +29,7 @@ gulp.task('test', function() {
 // run browser-sync on for client changes
 gulp.task('browser-sync', ['nodemon', 'watch'], function() {
     browserSync.init(null, {
+        open: false,
         proxy: "http://localhost:3000",
         files: ["out/**/*.*", "out/routes/**/*.*", "out/public/**/*.*", "out/views/**/*.*"],
         port: 7000,
