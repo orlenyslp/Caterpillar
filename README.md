@@ -9,7 +9,9 @@ The prototype has two versions. We are currently developing the version v2.0, wh
 
 The approach implemented by the v2.0 can be accessed from: https://arxiv.org/abs/1808.03517.
 
-The paper describing the Role Dynamic Binding and Access Control implemented by v2.1 can be accessed from: https://arxiv.org/abs/1812.02909. 
+The paper describing the Role Dynamic Binding and Access Control implemented by v2.1 can be accessed from: https://arxiv.org/abs/1812.02909.
+
+More detailed documentation on how to use Caterpillar (v2.0 and v2.1) can be found at:  https://github.com/orlenyslp/Caterpillar/blob/master/v2.1/CaterpillarDoc.pdf
 
 Additionally, a demo paper about v1.0: can be accessed from: http://ceur-ws.org/Vol-1920/BPM_2017_paper_199.pdf
 
