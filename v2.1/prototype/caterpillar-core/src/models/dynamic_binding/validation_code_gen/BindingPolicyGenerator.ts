@@ -243,10 +243,11 @@ export let generatePolicy = (policyStr: string, policyName: string)  => {
                 creatorMask: roleMask(policy.caseCreator),
                 statementMask: (statement) => statementMask(statement),
                 nominationStatements: policy.nominationStatements,
-                nominationMask: (nominator) => nominatorMask(policy.nominationStatements, nominator),
+                nominationMask: (nominator, statements) => nominatorMask(statements, nominator),
                 disjunctionSetJoinMask: (disjunctionSet) => disjunctionSetJoinMask(disjunctionSet),
                 disjunctionSetMask: (disjunctionSet) => disjunctionSetMask(disjunctionSet),
-                endorsementRequiredMask: (statements) => endorsementRequiredMask(statements)
+                endorsementRequiredMask: (statements) => endorsementRequiredMask(statements),
+                releaseStatements: policy.releaseStatements
             }
 
             policy.solidity = policy2solTemplate(codeGenerationInfo);
