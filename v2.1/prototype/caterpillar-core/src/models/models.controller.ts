@@ -7,10 +7,13 @@ import BigNumber from "bignumber.js";
 import {ModelInfo} from './definitions';
 import {parseModel} from './models.parsers';
 import {repoSchema} from '../repo/procModelData';
+import {registrySchema} from '../repo/procModelData';
+import {policySchema} from '../repo/procModelData';
+import {roleTaskSchema} from '../repo/procModelData';
 
 import {generatePolicy} from './dynamic_binding/validation_code_gen/BindingPolicyGenerator';
 import {generateRoleTaskContract} from './dynamic_binding/validation_code_gen/ProcessRoleGenerator';
-import {Policy} from './dynamic_binding/validation_code_gen/DataStructures'
+
 // import * as mongoose from 'mongoose';
 
 // let app = require('express')();
@@ -69,11 +72,11 @@ web3.eth.filter("latest", function (error, result) {
                                       'cumulGas': transRec.cumulativeGasUsed }
                    toNotify.push(tranInfo)
 
-                   if(toPrint.length > 0 && toPrint === transactionHash) {
-                       // console.log('Gas :' + tI + " " + transRec.gasUsed);
-                       toPrint = '';
-                       tI = 0;
-                   }
+                 //  if(toPrint.length > 0 && toPrint === transactionHash) {
+                 //      // console.log('Gas :' + tI + " " + transRec.gasUsed);
+                 //      toPrint = '';
+                 //      tI = 0;
+                 //  }
     
                   if(!bindingOpTransactions.has(tranInfo.hash)) {
                     transRec.logs.forEach(logElem => {
@@ -106,13 +109,6 @@ let workListInstances: Map<string, string> = new Map();
 let bindingOpTransactions: Map<string, number> = new Map();
 
 let processRegistryContract: any = undefined;
-let policyContract: any = undefined;
-let policyOutput = undefined;
-let runtimePolicyContract: any = undefined;
-let taskRoleContract: any = undefined;
-
-
-let policyInfo = undefined;
 
 // Querying for every contract all the created instances
 
@@ -167,7 +163,6 @@ models.get('/models', (req, res) => {
                         })
                     }
                 });
-                
                 console.log('----------------------------------------------------------------------------------------------');
                 res.send(actives);
             }
@@ -177,7 +172,6 @@ models.get('/models', (req, res) => {
         console.log('----------------------------------------------------------------------------------------------');
     }
 });
-
 
 
 //////////////////////////////////////////////////////////////////////
@@ -223,18 +217,71 @@ models.post('/registry', (req, res) => {
                         console.log('RESULT ', err);
                         res.status(403).send(err);
                     } else if (contract.address) {
-                        processRegistryContract = contract;
-                        let registryGas = web3.eth.getTransactionReceipt(contract.transactionHash).gasUsed;
-                        console.log("Process Registry DEPLOYED and RUNNING at " + processRegistryContract.address.toString());
-                        console.log('GAS USED: ', registryGas);
-                        res.status(200).send({ 'address': processRegistryContract.address.toString(), gas: registryGas});
-                        console.log('----------------------------------------------------------------------------------------------');
+                        registrySchema.create(
+                            {
+                                address: contract.address,
+                                solidityCode: input['ProcessRegistry'],
+                                abi: output.contracts['ProcessRegistry:ProcessRegistry'].interface,
+                                bytecode: output.contracts['ProcessRegistry:ProcessRegistry'].bytecode,
+                            },
+                            (err, repoData) => {
+                                if (err) {
+                                    console.log('Error ', err);
+                                    console.log('----------------------------------------------------------------------------------------------');
+                                    // registerModels(currentIndex, sortedElements, createdElementMap, modelInfo, contracts, res);
+                                }
+                                else {
+                                    processRegistryContract = contract;
+                                    let registryGas = web3.eth.getTransactionReceipt(contract.transactionHash).gasUsed;
+                                    let idAsString = repoData._id.toString();
+                                    console.log("Process Registry DEPLOYED and RUNNING at " + processRegistryContract.address.toString());
+                                    console.log('GAS USED: ', registryGas);
+                                    console.log('REPO ID: ', idAsString);
+                                    res.status(200).send({ 'address': processRegistryContract.address.toString(), gas: registryGas, repoId: idAsString});
+                                    console.log('----------------------------------------------------------------------------------------------');
+                                }
+                            })
                     }
                 });
     } catch (e) {
         console.log("Error: ", e);
         console.log('----------------------------------------------------------------------------------------------');
         res.status(400).send(e);
+    }
+});
+
+models.post('/registry/load', (req, res) => {
+    console.log('LOADING PROCESS RUNTIME REGISTRY ...');
+    if(web3.isAddress(req.body.from)) {
+        registrySchema.find({address: req.body.from},
+            (err, repoData) => {
+                if (!err && repoData && repoData.length > 0) {
+                    processRegistryContract = web3.eth.contract(JSON.parse(repoData[0].abi)).at(req.body.from);
+                    console.log('Registry Loaded Successfully');
+                    res.status(200).send('Registry Loaded Successfully');
+                    console.log('----------------------------------------------------------------------------------------------');
+                } else {
+                    console.log("Error: Registry NOT Found");
+                    console.log('----------------------------------------------------------------------------------------------');
+                    res.status(400).send('Registry NOT Found');
+                    return;
+                }
+            })
+    } else {
+        registrySchema.find({_id: req.body.from},
+            (err, repoData) => {
+                if (!err && repoData && repoData.length > 0) {
+                    processRegistryContract = web3.eth.contract(JSON.parse(repoData[0].abi)).at(repoData[0].address);
+                    console.log('Registry Loaded Successfully');
+                    res.status(200).send('Registry Loaded Successfully');
+                    console.log('----------------------------------------------------------------------------------------------');
+                } else {
+                    console.log("Error: Registry NOT Found");
+                    console.log('----------------------------------------------------------------------------------------------');
+                    res.status(400).send('Registry NOT Found');
+                    return;
+                }
+            })
     }
 });
 
@@ -280,8 +327,6 @@ models.post('/resources/policy', (req, res) => {
             }
 
             console.log('POLICY CONTRACTS GENERATED AND COMPILED SUCCESSFULLY');
-
-            policyOutput = output;
             
             let ProcContract = web3.eth.contract(JSON.parse(output.contracts['BindingPolicy:BindingPolicy_Contract'].interface));
             ProcContract.new(
@@ -296,20 +341,40 @@ models.post('/resources/policy', (req, res) => {
                         console.log('RESULT ', err);
                         res.status(403).send(err);
                     } else if (contract.address) {
-                        policyContract = contract;
-                        
-                        let policyGas = web3.eth.getTransactionReceipt(contract.transactionHash).gasUsed;
-                        console.log("Policy CREATED and RUNNING at " + policyContract.address.toString());
-                        console.log('GAS USED: ', policyGas);
-                        console.log(".............................................");
 
-                        policyInfo = policy;
-
-                        console.log('Role\'s indexes: ', policy.roleIndexMap);
-                        console.log(".............................................");
-
-                        res.status(200).send({address: policyContract.address.toString(), gas: policyGas });
-                        console.log('----------------------------------------------------------------------------------------------');
+                        let indexToRole = [];
+                        for (let [role, index] of policy.roleIndexMap) {
+                            indexToRole[index] = role;
+                        }
+                        policySchema.create(
+                            {
+                                address: contract.address,
+                                model: req.body.model,
+                                solidityCode: input['BindingPolicy'],
+                                abi: output.contracts['BindingPolicy:BindingPolicy_Contract'].interface,
+                                bytecode: output.contracts['BindingPolicy:BindingPolicy_Contract'].bytecode,
+                                indexToRole: indexToRole,
+                                accessControlAbi: output.contracts['BindingAccessControl:BindingAccessControl'].interface,
+                                accessControlBytecode: output.contracts['BindingAccessControl:BindingAccessControl'].bytecode,
+                            },
+                            (err, repoData) => {
+                                if (err) {
+                                    console.log('Error ', err);
+                                    console.log('----------------------------------------------------------------------------------------------');
+                                    // registerModels(currentIndex, sortedElements, createdElementMap, modelInfo, contracts, res);
+                                }
+                                else {
+                                    let idAsString = repoData._id.toString();
+                                    let policyGas = web3.eth.getTransactionReceipt(contract.transactionHash).gasUsed;
+                                    console.log("Policy CREATED and RUNNING at " + contract.address.toString());
+                                    console.log('GAS USED: ', policyGas);
+                                    console.log('Policy Id: ',  idAsString);
+                                    console.log('Role\'s indexes: ', policy.roleIndexMap);
+                                    console.log(".............................................");
+                                    res.status(200).send({address: contract.address.toString(), gas: policyGas, repoId: idAsString });
+                                    console.log('----------------------------------------------------------------------------------------------');
+                                }
+                        })
                     }
                 });
         })
@@ -325,13 +390,34 @@ models.post('/resources/task-role', (req, res) => {
         console.log('ERROR: Runtime Registry NOT FOUND.');
         res.status(404).send({ 'Error': 'Runtime Registry NOT FOUND. Please, Create/Load a Registry.' });
         console.log('----------------------------------------------------------------------------------------------');
-    } else if(policyContract === undefined) {
-        console.log('ERROR: Binding Policy NOT FOUND.');
-        res.status(404).send({ 'Error': 'Binding Policy NOT FOUND. Please, provide a Binding Policy.' });
-    } else {  
-        let processData: Map<string, Array<any>> = new Map();
-        searchRepository(0, [req.body.rootProc], processData, res);
-        console.log('----------------------------------------------------------------------------------------------');
+    } else {
+        if(web3.isAddress(req.body.policyId)) {
+            policySchema.find({address: req.body.policyId},
+                (err, repoData) => {
+                    if (!err && repoData && repoData.length > 0) {
+                        let processData: Map<string, Array<any>> = new Map();
+                        searchRepository(0, [req.body.rootProc], processData, res, req.body.policyId, findRoleMap(repoData[0].indexToRole));
+                    } else {
+                        console.log("Error: Binding Policy NOT Found");
+                        console.log('----------------------------------------------------------------------------------------------');
+                        res.status(400).send('Binding Policy NOT Found');
+                        return;
+                    }
+                })
+        } else {
+            policySchema.find({_id: req.body.policyId},
+                (err, repoData) => {
+                    if (!err && repoData && repoData.length > 0) {
+                        let processData: Map<string, Array<any>> = new Map();
+                        searchRepository(0, [req.body.rootProc], processData, res, req.body.policyId, findRoleMap(repoData[0].indexToRole));
+                    } else {
+                        console.log("Error: Binding Policy NOT Found");
+                        console.log('----------------------------------------------------------------------------------------------');
+                        res.status(400).send('Binding Policy NOT Found');
+                        return;
+                    }
+                })
+        }
     }
 });
 
@@ -340,50 +426,72 @@ models.get('/resources/:role/:procAddress', (req, res) => {
         res.status(200).send({'state' : 'INVALID INPUT PROCESS ADDRESS'});
    } else if(processRegistryContract === undefined) {
         res.status(200).send({'state' : 'UNDEFINED PROCESS REGISTRY'});
-   } else if(!policyInfo === undefined) {
-        res.status(200).send({'state' : 'UNDEFINED POLICY CONTRACT'});
-   } else if(!policyInfo.roleIndexMap.has(req.params.role)) {
-        res.status(200).send({'state' : 'UNDEFINED INPUT ROLE'});
-   } else if (runtimePolicyContract === undefined) {
-        res.status(200).send({'state' : 'UNDEFINED ROOT PROCESS CONTRACT AND BINDING RUNTIME CONTRACT'});
    } else {
-       let result = runtimePolicyContract.roleState.call(policyInfo.roleIndexMap.get(req.params.role), req.params.procAddress);
-       if(result.c[0] === 0) {
-            console.log(`${req.params.role} is UNBOUND`)
-            res.status(200).send({'state' : 'UNBOUND'});
-       } else if(result.c[0] === 1) {
-            console.log(`${req.params.role} is RELEASING`)
-            res.status(200).send({'state' : 'RELEASING'});
-       } else if(result.c[0] === 2) {
-            console.log(`${req.params.role} is NOMINATED`)
-            res.status(200).send({'state' : 'NOMINATED'});
-       } else if(result.c[0] === 3) {
-            console.log(`${req.params.role} is BOUND`)
-            res.status(200).send({'state' : 'BOUND'});
-       } else
-            res.status(200).send({'state' : 'UNDEFINED'});
+        let _policyId = web3.toAscii(processRegistryContract.bindingPolicyFor.call(req.params.procAddress)).toString().substr(0, 24);
+        policySchema.find({_id: _policyId},
+            (err, repoData) => {
+                if (!err && repoData && repoData.length > 0) {
+                    let roleIndexMap = findRoleMap(repoData[0].indexToRole);
+                    if(!roleIndexMap.has(req.params.role)) {
+                        console.log('UNDEFINED INPUT ROLE');
+                        res.status(200).send({'state' : 'UNDEFINED INPUT ROLE'});
+                    } else {
+                        let accessControlAddr =  processRegistryContract.findRuntimePolicy.call(req.params.procAddress);
+                        if(accessControlAddr.toString() === '0x0000000000000000000000000000000000000000') {
+                            console.log('UNDEFINED ACESS CONTROL CONTRACT');
+                            res.status(200).send({'state' : 'UNDEFINED ACESS CONTROL CONTRACT'});
+                        } else {
+                            let _runtimePolicyContract = web3.eth.contract(JSON.parse(repoData[0].accessControlAbi)).at(accessControlAddr);
+                            let result = _runtimePolicyContract.roleState.call(roleIndexMap.get(req.params.role), req.params.procAddress);
+                            if(result.c[0] === 0) {
+                                console.log(`${req.params.role} is UNBOUND`)
+                                res.status(200).send({'state' : 'UNBOUND'});
+                            } else if(result.c[0] === 1) {
+                                console.log(`${req.params.role} is RELEASING`)
+                                res.status(200).send({'state' : 'RELEASING'});
+                            } else if(result.c[0] === 2) {
+                                console.log(`${req.params.role} is NOMINATED`)
+                                res.status(200).send({'state' : 'NOMINATED'});
+                            } else if(result.c[0] === 3) {
+                                console.log(`${req.params.role} is BOUND`)
+                                res.status(200).send({'state' : 'BOUND'});
+                            } else {
+                                console.log('UNDEFINED STATE');
+                                res.status(200).send({'state' : 'UNDEFINED'});
+                            }
+                        }
+                    }
+                } else {
+                    console.log('UNDEFINED POLICY CONTRACT');
+                    res.status(200).send({'state' : 'UNDEFINED POLICY CONTRACT'});
+                    return;
+                }
+            });
    }
    console.log('----------------------------------------------------------------------------------------------');
 });
 
-let validateInput = (rNominator: string, rNominee: string, res: any) => {
-    if(policyInfo === undefined) {
-        console.log('ERROR: Binding Policy NOT FOUND.');
-        res.status(404).send({ 'Error': 'Binding Policy NOT FOUND. Please, provide a Binding Policy.' });
-        console.log('----------------------------------------------------------------------------------------------');
-        return false;
-    } else if(!policyInfo.roleIndexMap.has(rNominee)) {
+let validateInput = (rNominator: string, rNominee: string, roleIndexMap, res: any) => {
+    if(!roleIndexMap.has(rNominee)) {
         console.log(`Error Nominee Role [${rNominee}] NOT FOUND`);
         res.status(404).send({ 'Error': `Nominee Role [${rNominee}] NOT FOUND` });
         console.log('----------------------------------------------------------------------------------------------');
         return false;
-    } else if(!policyInfo.roleIndexMap.has(rNominator)) {
+    } else if(!roleIndexMap.has(rNominator)) {
         console.log(`Error Nominee Role [${rNominee}] NOT FOUND`);
         res.status(404).send({ 'Error': `Nominee Role [${rNominee}] NOT FOUND` });
         console.log('----------------------------------------------------------------------------------------------');
         return false;
     }
     return true;
+}
+
+let findRoleMap = (repoArr) => {
+    let roleInedexMap: Map<string, number> = new Map();
+    for (let i = 1; i < repoArr.length; i++)
+        if(repoArr[i]) 
+            roleInedexMap.set(repoArr[i], i);
+    return roleInedexMap;    
 }
 
 let verifyAddress = (address: string, actor: string, res: any) => {
@@ -396,134 +504,122 @@ let verifyAddress = (address: string, actor: string, res: any) => {
     return true;
 }
 
-let toPrint = '';
-let tI = 0;
-models.post('/resources/canperform', (req, res) => {
-    if (runtimePolicyContract != undefined) {
-        repoSchema.find({_id: req.body.pId},
-            (err, repoData) => {
-                if (err) {
-                    return;
-                } else {
-                  if(repoData.length > 0) {
-                    let dictionary = repoData[0].indexToElement;
-                    for (let i = 1; i < dictionary.length; i++) {
-                        if(dictionary[i].type === 'Workitem' && dictionary[i].id ===  req.body.taskIndex) {
-                            runtimePolicyContract.canPerform(
-                                req.body.actor,
-                                req.body.pCase,
-                                i, 
-                                {
-                                    from: req.body.actor,
-                                    gas: 4700000
-                                },
-                                (error, result) => {
-                                    if (result) {
-                                        toPrint = result;
-                                        tI = i;
-                                        console.log('canPerform: ' + i + " " + dictionary[i].name);
-                                        // console.log('----------------------------------------------------------------------------------------------');
-                                        res.status(200).send({'transactionHash': result});
-                                        return;
-                                    }
-                                    else {
-                                        // console.log('Error', error)
-                                        // console.log('----------------------------------------------------------------------------------------------');
-                                        res.status(400).send({'ERROR': error});
-                                    }
-                                })
-                        }
-                    }
-                }
-            }
-        })
-        } else {
-            // console.log(`Process Instance NOT FOUND.`);
-            res.status(404).send({ 'Error': `Process Instance NOT FOUND. The nomination of an actor must occurr afterthe process deployment.` });
-            // console.log('----------------------------------------------------------------------------------------------');
-        }
-})
-
 
 models.post('/resources/nominate', (req, res) => {
-    if(validateInput(req.body.rNominator, req.body.rNominee, res)) {
-        if (verifyAddress(req.body.nominator, 'Nominator', res) && 
-            verifyAddress(req.body.nominee, 'Nominee', res) && 
-            verifyAddress(req.body.pCase, 'Process Case', res)) {
-                if (runtimePolicyContract != undefined) {
-                    console.log(`${req.body.rNominator}[${req.body.nominator}] is nominating ${req.body.rNominee}[${req.body.nominee}]`);
-                    console.log(`Process Case: ${req.body.pCase}`);
-                    runtimePolicyContract.nominate(
-                        policyInfo.roleIndexMap.get(req.body.rNominator),
-                        policyInfo.roleIndexMap.get(req.body.rNominee),
-                        req.body.nominator,
-                        req.body.nominee,
-                        req.body.pCase, 
-                        {
-                            from: req.body.nominator,
-                            gas: 4700000
-                        },
-                        (error, result) => {
-                            if (result) {
-                                console.log(`SUCCESS: ${req.body.nominator} nominated ${req.body.nominee}`);
-                                console.log(`Transaction Hash: ${result}`)
-                                console.log('----------------------------------------------------------------------------------------------');
-                                bindingOpTransactions.set(result, 0);
-                                res.status(200).send({'transactionHash': result});
-                            }
-                            else {
-                                console.log('ERROR', 'Nomination REJECTED by the Binding Policy');
-                                console.log('----------------------------------------------------------------------------------------------');
-                                res.status(400).send({'ERROR': error});
-                            }
-                        })
+    if(processRegistryContract === undefined) {
+        res.status(404).send({'state' : 'UNDEFINED PROCESS REGISTRY'});
+   } else {
+        let _policyId = web3.toAscii(processRegistryContract.bindingPolicyFor.call(req.body.pCase)).toString().substr(0, 24);
+        policySchema.find({_id: _policyId},
+            (err, repoData) => {
+                if (!err && repoData && repoData.length > 0) {
+                    let roleIndexMap = findRoleMap(repoData[0].indexToRole);
+                    if(validateInput(req.body.rNominator, req.body.rNominee, roleIndexMap, res)) {
+                        if (verifyAddress(req.body.nominator, 'Nominator', res) && 
+                            verifyAddress(req.body.nominee, 'Nominee', res) && 
+                            verifyAddress(req.body.pCase, 'Process Case', res)) {
+                                let accessControlAddr =  processRegistryContract.findRuntimePolicy.call(req.body.pCase);
+                                if(accessControlAddr.toString() !== '0x0000000000000000000000000000000000000000') {
+                                    console.log(`${req.body.rNominator}[${req.body.nominator}] is nominating ${req.body.rNominee}[${req.body.nominee}]`);
+                                    console.log(`Process Case: ${req.body.pCase}`);
+                                    let _runtimePolicyContract = web3.eth.contract(JSON.parse(repoData[0].accessControlAbi)).at(accessControlAddr);
+                                    _runtimePolicyContract.nominate(
+                                        roleIndexMap.get(req.body.rNominator),
+                                        roleIndexMap.get(req.body.rNominee),
+                                        req.body.nominator,
+                                        req.body.nominee,
+                                        req.body.pCase, 
+                                        {
+                                            from: req.body.nominator,
+                                            gas: 4700000
+                                        },
+                                        (error, result) => {
+                                            if (result) {
+                                                console.log(`SUCCESS: ${req.body.nominator} nominated ${req.body.nominee}`);
+                                                console.log(`Transaction Hash: ${result}`)
+                                                console.log('----------------------------------------------------------------------------------------------');
+                                                bindingOpTransactions.set(result, 0);
+                                                res.status(200).send({'transactionHash': result});
+                                            }
+                                            else {
+                                                console.log('ERROR', 'Nomination REJECTED by the Binding Policy');
+                                                console.log('----------------------------------------------------------------------------------------------');
+                                                res.status(404).send({'ERROR': error});
+                                            }
+                                        })
+                                } else {
+                                    console.log(`Process Instance NOT FOUND.`);
+                                    res.status(404).send({ 'Error': `Process Instance NOT FOUND. The nomination of an actor must occurr afterthe process deployment.` });
+                                    console.log('----------------------------------------------------------------------------------------------');
+                                }
+                        }
+                    }
                 } else {
-                    console.log(`Process Instance NOT FOUND.`);
-                    res.status(404).send({ 'Error': `Process Instance NOT FOUND. The nomination of an actor must occurr afterthe process deployment.` });
-                    console.log('----------------------------------------------------------------------------------------------');
+                    console.log('UNDEFINED POLICY CONTRACT');
+                    res.status(400).send({'state' : 'UNDEFINED POLICY CONTRACT'});
+                    return;
                 }
-        }
-    }
+            })
+   }
 })
 
 models.post('/resources/release', (req, res) => {
-    if(validateInput(req.body.rNominator, req.body.rNominee, res)) {
-        if (verifyAddress(req.body.nominator, 'Nominator', res) && 
-            verifyAddress(req.body.pCase, 'Process Case', res)) {
-                if (runtimePolicyContract != undefined) {
-                    runtimePolicyContract.release(
-                        policyInfo.roleIndexMap.get(req.body.rNominator),
-                        policyInfo.roleIndexMap.get(req.body.rNominee),
-                        req.body.nominator,
-                        req.body.pCase, 
-                        {
-                            from: req.body.nominator,
-                            gas: 4700000
-                        },
-                        (error, result) => {
-                            if (result) {
-                                console.log(`SUCCESS: ${req.body.nominator} released ${req.body.nominee}`);
-                                console.log(`Transaction Hash: ${result}`)
-                                console.log('----------------------------------------------------------------------------------------------');
-                                bindingOpTransactions.set(result, 0);
-                                res.status(200).send({'transactionHash': result});
+    if(processRegistryContract === undefined) {
+        res.status(404).send({'state' : 'UNDEFINED PROCESS REGISTRY'});
+   } else {
+        let _policyId = web3.toAscii(processRegistryContract.bindingPolicyFor.call(req.body.pCase)).toString().substr(0, 24);
+        policySchema.find({_id: _policyId},
+            (err, repoData) => {
+                if (!err && repoData && repoData.length > 0) {
+                    let roleIndexMap = findRoleMap(repoData[0].indexToRole);
+                    if(validateInput(req.body.rNominator, req.body.rNominee, roleIndexMap, res)) {
+                        if (verifyAddress(req.body.nominator, 'Nominator', res) && 
+                            verifyAddress(req.body.pCase, 'Process Case', res)) {
+                                let accessControlAddr =  processRegistryContract.findRuntimePolicy.call(req.body.pCase);
+                                if(accessControlAddr.toString() !== '0x0000000000000000000000000000000000000000') {
+                                    console.log(`${req.body.rNominator}[${req.body.nominator}] is releasing ${req.body.rNominee}[${req.body.nominee}]`);
+                                    console.log(`Process Case: ${req.body.pCase}`);
+                                    let _runtimePolicyContract = web3.eth.contract(JSON.parse(repoData[0].accessControlAbi)).at(accessControlAddr);
+                                    _runtimePolicyContract.release(
+                                        roleIndexMap.get(req.body.rNominator),
+                                        roleIndexMap.get(req.body.rNominee),
+                                        req.body.nominator,
+                                        req.body.pCase, 
+                                        {
+                                            from: req.body.nominator,
+                                            gas: 4700000
+                                        },
+                                        (error, result) => {
+                                            if (result) {
+                                                console.log(`SUCCESS: ${req.body.nominator} released ${req.body.nominee}`);
+                                                console.log(`Transaction Hash: ${result}`)
+                                                console.log('----------------------------------------------------------------------------------------------');
+                                                bindingOpTransactions.set(result, 0);
+                                                res.status(200).send({'transactionHash': result});
+                                            }
+                                            else {
+                                                console.log('ERROR', 'Release REJECTED by the Binding Policy');
+                                                res.status(400).send({'ERROR': error});
+                                            }
+                                        })
+                                } else {
+                                    console.log(`Process Instance NOT FOUND.`);
+                                    res.status(404).send({ 'Error': `Process Instance NOT FOUND. The release of an actor must occurr afterthe process deployment.` });
+                                    console.log('----------------------------------------------------------------------------------------------');
+                                }
                             }
-                            else {
-                                console.log('ERROR', 'Release REJECTED by the Binding Policy');
-                                res.status(400).send({'ERROR': error});
-                            }
-                        })
+                    }
                 } else {
-                    console.log(`Process Instance NOT FOUND.`);
-                    res.status(404).send({ 'Error': `Process Instance NOT FOUND. The release of an actor must occurr afterthe process deployment.` });
-                    console.log('----------------------------------------------------------------------------------------------');
+                    console.log('UNDEFINED POLICY CONTRACT');
+                    res.status(400).send({'state' : 'UNDEFINED POLICY CONTRACT'});
+                    return;
                 }
-            }
-    }
+            })
+   }
 })
 
-let verifyEndorser = (rEndorser: string, endorser: string, res: any) => {
-    if(!policyInfo.roleIndexMap.has(rEndorser)) {
+let verifyEndorser = (rEndorser: string, endorser: string, roleIndexMap, res: any) => {
+    if(!roleIndexMap.has(rEndorser)) {
         console.log(`Error Endorser Role [${rEndorser}] NOT FOUND`);
         res.status(404).send({ 'Error': `Nominee Role [${rEndorser}] NOT FOUND` });
         console.log('----------------------------------------------------------------------------------------------');
@@ -533,81 +629,98 @@ let verifyEndorser = (rEndorser: string, endorser: string, res: any) => {
 }
 
 models.post('/resources/vote', (req, res) => {
-    if(validateInput(req.body.rNominator, req.body.rNominee, res)) {
-        if (verifyEndorser(req.body.rEndorser, req.body.endorser, res) && 
-            verifyAddress(req.body.pCase, 'Process Case', res)) {
-                if (runtimePolicyContract != undefined) {
-                    if(req.body.onNomination) {
-                        let voteResult = req.body.isAccepted === "true" ? 'endorsing' : 'rejecting';
-                        console.log(`${req.body.rEndorser}[${req.body.endorser}] is ${voteResult} nomination of ${req.body.rNominee} by ${req.body.rNominator}`)
-                        console.log(`Process Case: ${req.body.pCase}`)
-                        runtimePolicyContract.voteN (
-                            policyInfo.roleIndexMap.get(req.body.rNominator),
-                            policyInfo.roleIndexMap.get(req.body.rNominee),
-                            policyInfo.roleIndexMap.get(req.body.rEndorser),
-                            req.body.endorser,
-                            req.body.pCase,
-                            req.body.isAccepted,
-                            {
-                                from: req.body.endorser,
-                                gas: 4700000
-                            },
-                            (error, result) => {
-                                if (result) {
-                                    let tp = req.body.isAccepted === 'true' ? 'endorsed' : 'rejected'; 
-                                    console.log(`SUCCESS: ${req.body.endorser} ${tp} the nomination of ${req.body.nominee}`);
-                                    console.log(`Transaction Hash: ${result}`)
+   if(processRegistryContract === undefined) {
+        res.status(404).send({'state' : 'UNDEFINED PROCESS REGISTRY'});
+   } else {
+        let _policyId = web3.toAscii(processRegistryContract.bindingPolicyFor.call(req.body.pCase)).toString().substr(0, 24);
+        policySchema.find({_id: _policyId},
+            (err, repoData) => {
+                if (!err && repoData && repoData.length > 0) {
+                    let roleIndexMap = findRoleMap(repoData[0].indexToRole);
+                    if(validateInput(req.body.rNominator, req.body.rNominee, roleIndexMap, res)) {
+                        if (verifyEndorser(req.body.rEndorser, req.body.endorser, roleIndexMap, res) && 
+                            verifyAddress(req.body.pCase, 'Process Case', res)) {
+                                let accessControlAddr =  processRegistryContract.findRuntimePolicy.call(req.body.pCase);
+                                if(accessControlAddr.toString() !== '0x0000000000000000000000000000000000000000') {
+                                    let _runtimePolicyContract = web3.eth.contract(JSON.parse(repoData[0].accessControlAbi)).at(accessControlAddr);
+                                    if(req.body.onNomination) {
+                                        let voteResult = req.body.isAccepted === "true" ? 'endorsing' : 'rejecting';
+                                        console.log(`${req.body.rEndorser}[${req.body.endorser}] is ${voteResult} nomination of ${req.body.rNominee} by ${req.body.rNominator}`)
+                                        console.log(`Process Case: ${req.body.pCase}`)
+                                        _runtimePolicyContract.voteN (
+                                            roleIndexMap.get(req.body.rNominator),
+                                            roleIndexMap.get(req.body.rNominee),
+                                            roleIndexMap.get(req.body.rEndorser),
+                                            req.body.endorser,
+                                            req.body.pCase,
+                                            req.body.isAccepted,
+                                            {
+                                                from: req.body.endorser,
+                                                gas: 4700000
+                                            },
+                                            (error, result) => {
+                                                if (result) {
+                                                    let tp = req.body.isAccepted === 'true' ? 'endorsed' : 'rejected'; 
+                                                    console.log(`SUCCESS: ${req.body.endorser} ${tp} the nomination of ${req.body.nominee}`);
+                                                    console.log(`Transaction Hash: ${result}`)
+                                                    console.log('----------------------------------------------------------------------------------------------');
+                                                    bindingOpTransactions.set(result, 0);
+                                                    res.status(200).send({'transactionHash': result});
+                                                }
+                                                else {
+                                                    console.log('ERROR', 'Vote REJECTED by the Binding Policy');
+                                                    console.log('----------------------------------------------------------------------------------------------');
+                                                    res.status(400).send({'ERROR': error});
+                                                }
+                                            })
+                                    } else {
+                                        let voteResult = req.body.isAccepted === "true" ? 'endorsing' : 'rejecting';
+                                        console.log(`${req.body.rEndorser}[${req.body.endorser}] is ${voteResult} release of ${req.body.rNominee} by ${req.body.rNominator}`)
+                                        console.log(`Process Case: ${req.body.pCase}`)
+                                        _runtimePolicyContract.voteR (
+                                            roleIndexMap.get(req.body.rNominator),
+                                            roleIndexMap.get(req.body.rNominee),
+                                            roleIndexMap.get(req.body.rEndorser),
+                                            req.body.endorser,
+                                            req.body.pCase,
+                                            req.body.isAccepted,
+                                            {
+                                                from: req.body.endorser,
+                                                gas: 4700000
+                                            },
+                                            (error, result) => {
+                                                if (result) {
+                                                    let tp = req.body.isAccepted === 'true' ? 'endorsed' : 'rejected'; 
+                                                    console.log(`VOTE ACCEPTED: ${req.body.endorser} ${tp} the release of ${req.body.nominee}`);
+                                                    console.log(`Transaction Hash: ${result}`)
+                                                    console.log('----------------------------------------------------------------------------------------------');
+                                                    bindingOpTransactions.set(result, 0);
+                                                    res.status(200).send({'transactionHash': result});
+                                                }
+                                                else {
+                                                    console.log('ERROR', 'Vote REJECTED by the Binding Policy');
+                                                    console.log('----------------------------------------------------------------------------------------------');
+                                                    res.status(400).send({'ERROR': error});
+                                                }
+                                            })
+                                    }
+                                } else {
+                                    console.log(`Process Instance NOT FOUND.`);
+                                    res.status(404).send({ 'Error': `Process Instance NOT FOUND. The voting of an operation must occurr afterthe process deployment.` });
                                     console.log('----------------------------------------------------------------------------------------------');
-                                    bindingOpTransactions.set(result, 0);
-                                    res.status(200).send({'transactionHash': result});
                                 }
-                                else {
-                                    console.log('ERROR', 'Vote REJECTED by the Binding Policy');
-                                    console.log('----------------------------------------------------------------------------------------------');
-                                    res.status(400).send({'ERROR': error});
-                                }
-                            })
-                    } else {
-                        let voteResult = req.body.isAccepted === "true" ? 'endorsing' : 'rejecting';
-                        console.log(`${req.body.rEndorser}[${req.body.endorser}] is ${voteResult} release of ${req.body.rNominee} by ${req.body.rNominator}`)
-                        console.log(`Process Case: ${req.body.pCase}`)
-                        runtimePolicyContract.voteR (
-                            policyInfo.roleIndexMap.get(req.body.rNominator),
-                            policyInfo.roleIndexMap.get(req.body.rNominee),
-                            policyInfo.roleIndexMap.get(req.body.rEndorser),
-                            req.body.endorser,
-                            req.body.pCase,
-                            req.body.isAccepted,
-                            {
-                                from: req.body.endorser,
-                                gas: 4700000
-                            },
-                            (error, result) => {
-                                if (result) {
-                                    let tp = req.body.isAccepted === 'true' ? 'endorsed' : 'rejected'; 
-                                    console.log(`VOTE ACCEPTED: ${req.body.endorser} ${tp} the release of ${req.body.nominee}`);
-                                    console.log(`Transaction Hash: ${result}`)
-                                    console.log('----------------------------------------------------------------------------------------------');
-                                    bindingOpTransactions.set(result, 0);
-                                    res.status(200).send({'transactionHash': result});
-                                }
-                                else {
-                                    console.log('ERROR', 'Vote REJECTED by the Binding Policy');
-                                    console.log('----------------------------------------------------------------------------------------------');
-                                    res.status(400).send({'ERROR': error});
-                                }
-                            })
-                    }
+                            }
+                    } 
                 } else {
-                    console.log(`Process Instance NOT FOUND.`);
-                    res.status(404).send({ 'Error': `Process Instance NOT FOUND. The voting of an operation must occurr afterthe process deployment.` });
-                    console.log('----------------------------------------------------------------------------------------------');
+                    console.log('UNDEFINED POLICY CONTRACT');
+                    res.status(400).send({'state' : 'UNDEFINED POLICY CONTRACT'});
+                    return;
                 }
-            }
-    } 
+            })
+   }
 })
 
-let searchRepository = (top: number, queue: Array<string>, processData: Map<string, Array<any>>, response) => {
+let searchRepository = (top: number, queue: Array<string>, processData: Map<string, Array<any>>, response, policyId, roleIndexMap) => {
     processData.set(queue[top], new Array());
     repoSchema.find({_id: queue[top]},
         (err, repoData) => {
@@ -618,13 +731,13 @@ let searchRepository = (top: number, queue: Array<string>, processData: Map<stri
                 let dictionary = repoData[0].indexToElement;
                 for (let i = 1; i < dictionary.length; i++) {
                     if(dictionary[i].type === 'Workitem') {
-                        processData.get(queue[top]).push({taskIndex: i, roleIndex: policyInfo.roleIndexMap.get(dictionary[i].role)});
+                        processData.get(queue[top]).push({taskIndex: i, roleIndex: roleIndexMap.get(dictionary[i].role)});
                     } else if (dictionary[i].type === 'Separate-Instance') {
                         queue.push(web3.toAscii(processRegistryContract.childrenFor.call(queue[top], i)).toString().substr(0, 24));
                     } 
                 }
                 if(top < queue.length - 1)
-                    searchRepository(top + 1, queue, processData, response);
+                    searchRepository(top + 1, queue, processData, response, policyId, roleIndexMap);
                 else {
                     let procesRoleContract = generateRoleTaskContract(processData, 'TaskRoleContract', true);
                     procesRoleContract
@@ -660,12 +773,40 @@ let searchRepository = (top: number, queue: Array<string>, processData: Map<stri
                                     console.log('RESULT ', err);
                                     response.status(403).send(err);
                                 } else if (contract.address) {
-                                    taskRoleContract = contract;
-                                    let policyGas = web3.eth.getTransactionReceipt(contract.transactionHash).gasUsed;
-                                    console.log("TaskRoleMap CREATED and RUNNING at " + taskRoleContract.address.toString());
-                                    console.log('GAS USED: ', policyGas);
-                                    response.status(200).send({ address: taskRoleContract.address.toString(), gas: policyGas });
-                                    console.log('----------------------------------------------------------------------------------------------');
+                                    roleTaskSchema.create(
+                                        {
+                                            address: contract.address,
+                                            solidityCode: input['TaskRoleContract'],
+                                            abi: output.contracts['TaskRoleContract:TaskRoleContract_Contract'].interface,
+                                            bytecode: output.contracts['TaskRoleContract:TaskRoleContract_Contract'].bytecode,
+                                        },
+                                        (err, repoData) => {
+                                            if (err) {
+                                                console.log('Error ', err);
+                                                console.log('----------------------------------------------------------------------------------------------');
+                                            }
+                                            else {
+                                                let idAsString = repoData._id.toString();
+                                                processRegistryContract.relateProcessToPolicy(queue[0], policyId, idAsString, {
+                                                    from: web3.eth.accounts[0],
+                                                    gas: 4700000
+                                                },
+                                                (error, result) => {
+                                                    if (result) {
+                                                        let gas = web3.eth.getTransactionReceipt(contract.transactionHash).gasUsed;
+                                                        console.log("TaskRoleMap CREATED and RUNNING at " + contract.address.toString());
+                                                        console.log('GAS USED: ', gas);
+                                                        console.log('Repo Id: ',  idAsString);
+                                                        response.status(200).send({ address: contract.address.toString(), gas: gas, repoId: idAsString });
+                                                        console.log('----------------------------------------------------------------------------------------------');
+                                                    }
+                                                    else {
+                                                         console.log('ERROR ', error);
+                                                         response.status(400).send(error);
+                                                    }
+                                                })
+                                            }
+                                    })
                                 }
                             });
                     })
@@ -746,106 +887,118 @@ models.post('/models', (req, res) => {
 let caseCreatorMap: Map<string, string> = new Map();
 
 models.post('/models/:bundleId', (req, res) => {
-    if( policyOutput === undefined) {
-        console.log('Binding Policy NOT found');
-        res.status(404).send('Binding Policy not found');
-        console.log('----------------------------------------------------------------------------------------------');
-    } else if(taskRoleContract === undefined) {
-        console.log('Task-Role Contract NOT found');
-        res.status(404).send('Task-Role Contract NOT found');
-        console.log('----------------------------------------------------------------------------------------------');
-    } else if (verifyAddress(req.body.caseCreator, 'Case Creator', res) && processRegistryContract !== undefined) {
-        if (!policyInfo.roleIndexMap.has(req.body.creatorRole)) {
-            console.log('Case Creator Role NOT found');
-            res.status(404).send('Case Creator Role NOT found');
-            console.log('----------------------------------------------------------------------------------------------');
-        } else {
-            repoSchema.find({_id: req.params.bundleId},
-                (err, repoData) => {
-                    if (err)
-                        res.status(404).send('Process model not found');
-                    else {
-                        console.log("TRYING TO CREATE INSTANCE OF CONTRACT: ", repoData[0].rootProcessID);
-                        let ProcContract = web3.eth.contract(JSON.parse(policyOutput.contracts['BindingAccessControl:BindingAccessControl'].interface));
-                        ProcContract.new(processRegistryContract.address, policyContract.address, taskRoleContract.address,
-                            {
-                                from: req.body.caseCreator,
-                                data: "0x" + policyOutput.contracts['BindingAccessControl:BindingAccessControl'].bytecode,
-                                gas: 4700000
-                            },
-                            (err, contract) => {
-                                if (err) {
-                                    console.log(`ERROR: BindingAccessControl instance creation failed`);
-                                    console.log('RESULT ', err);
-                                    res.status(403).send(err);
-                                } else if (contract.address) {
-                                    runtimePolicyContract = contract;                                                     
-                                    let policyGas = web3.eth.getTransactionReceipt(contract.transactionHash).gasUsed;
-                                    console.log("BindingAccessControl Contract DEPLOYED and RUNNING at " + runtimePolicyContract.address.toString());
-                                    console.log('Gas Used: ', policyGas);
-                                    console.log('....................................................................');
-                                    
-                                    processRegistryContract.newBundleInstanceFor(repoData[0]._id.toString(), 0, contract.address, {
-                                            from: web3.eth.accounts[executionAccount],
-                                            gas: 4500000
-                                        },
-                                        (errNew, resNew) => {
-                                            if (!errNew) {
-                                                let myEvent = processRegistryContract.NewInstanceCreatedFor({
-                                                    fromBlock: 0,
-                                                    toBlock: 'latest'
-                                                });
-                                                myEvent.watch((errEvt, resEvt) => {
-                                                    if (!errEvt) {
-                                                        if (resEvt && resEvt.transactionHash === resNew && resEvt.event === 'NewInstanceCreatedFor' && parseInt(resEvt.args.parent.toString(), 16) === 0) {
-                                                            myEvent.stopWatching();
-                                                            let processAddress = resEvt.args.processAddress.toString();
-                                                            console.log('Root Process Contract DEPLOYED and RUNNING !!! AT ADDRESS: ', processAddress);
-                                                            console.log('GAS USED: ', web3.eth.getTransactionReceipt(resEvt.transactionHash).gasUsed);
+    if (verifyAddress(req.body.caseCreator, 'Case Creator', res) && processRegistryContract !== undefined) {
+        let _taskRoleId = web3.toAscii(processRegistryContract.taskRoleMapFromId.call(req.params.bundleId)).toString().substr(0, 24);
+        roleTaskSchema.find({_id: _taskRoleId},
+            (err, repoDataTaskRole) => {
+                if (!err && repoDataTaskRole && repoDataTaskRole.length > 0) {
+                    let _policyId = web3.toAscii(processRegistryContract.bindingPolicyFromId.call(req.params.bundleId)).toString().substr(0, 24);
+                    policySchema.find({_id: _policyId},
+                        (err, repoDataPolicy) => {
+                            if (!err && repoDataPolicy && repoDataPolicy.length > 0) {
+                                let roleIndexMap = findRoleMap(repoDataPolicy[0].indexToRole);
+                                if (!roleIndexMap.has(req.body.creatorRole)) {
+                                    console.log('Case Creator Role NOT found');
+                                    res.status(404).send('Case Creator Role NOT found');
+                                    console.log('----------------------------------------------------------------------------------------------');
+                                } else {
+                                    repoSchema.find({_id: req.params.bundleId},
+                                        (err, repoData) => {
+                                            if (err)
+                                                res.status(404).send('Process model not found');
+                                            else {
+                                                console.log("TRYING TO CREATE INSTANCE OF CONTRACT: ", repoData[0].rootProcessID);
+                                                let AccessControlContract = web3.eth.contract(JSON.parse(repoDataPolicy[0].accessControlAbi));
+                                                AccessControlContract.new(processRegistryContract.address, repoDataPolicy[0].address, repoDataTaskRole[0].address,
+                                                    {
+                                                        from: req.body.caseCreator,
+                                                        data: "0x" + repoDataPolicy[0].accessControlBytecode,
+                                                        gas: 4700000
+                                                    },
+                                                    (err, contract) => {
+                                                        if (err) {
+                                                            console.log(`ERROR: BindingAccessControl instance creation failed`);
+                                                            console.log('RESULT ', err);
+                                                            res.status(403).send(err);
+                                                        } else if (contract.address) {                                                   
+                                                            let policyGas = web3.eth.getTransactionReceipt(contract.transactionHash).gasUsed;
+                                                            console.log("BindingAccessControl Contract DEPLOYED and RUNNING at " + contract.address.toString());
+                                                            console.log('Gas Used: ', policyGas);
                                                             console.log('....................................................................');
                                                             
-                                                            runtimePolicyContract.nominateCaseCreator(policyInfo.roleIndexMap.get(req.body.creatorRole), req.body.caseCreator, processAddress, {
-                                                                from: web3.eth.accounts[0],
-                                                                gas: 4700000
-                                                            },
-                                                            (error1, result1) => {
-                                                                if (result1) {
-                                                                    console.log("Case-creator nominated ");
-                                                                    caseCreatorMap.set(result1, processAddress);
-                                                                    console.log('----------------------------------------------------------------------------------------------');
-                                                                    res.status(200).send({
-                                                                        address: processAddress, 
-                                                                        gas: web3.eth.getTransactionReceipt(resEvt.transactionHash).gasUsed,
-                                                                        runtimeAddress: runtimePolicyContract.address.toString(),
-                                                                        runtimeGas: policyGas,
-                                                                        transactionHash: result1,
-                                                                    });
-                                                                }
-                                                                else {
-                                                                    console.log('ERROR ', error1);
-                                                                    console.log('----------------------------------------------------------------------------------------------');
-                                                                    res.status(200).send({ERROR: error1});
-                                                                }
-                                                            })
-                                                            
+                                                            processRegistryContract.newBundleInstanceFor(repoData[0]._id.toString(), 0, contract.address, {
+                                                                    from: web3.eth.accounts[executionAccount],
+                                                                    gas: 4500000
+                                                                },
+                                                                (errNew, resNew) => {
+                                                                    if (!errNew) {
+                                                                        let myEvent = processRegistryContract.NewInstanceCreatedFor({
+                                                                            fromBlock: 0,
+                                                                            toBlock: 'latest'
+                                                                        });
+                                                                        myEvent.watch((errEvt, resEvt) => {
+                                                                            if (!errEvt) {
+                                                                                if (resEvt && resEvt.transactionHash === resNew && resEvt.event === 'NewInstanceCreatedFor' && parseInt(resEvt.args.parent.toString(), 16) === 0) {
+                                                                                    myEvent.stopWatching();
+                                                                                    let processAddress = resEvt.args.processAddress.toString();
+                                                                                    console.log('Root Process Contract DEPLOYED and RUNNING !!! AT ADDRESS: ', processAddress);
+                                                                                    console.log('GAS USED: ', web3.eth.getTransactionReceipt(resEvt.transactionHash).gasUsed);
+                                                                                    console.log('....................................................................');
+                                                                                    
+                                                                                    contract.nominateCaseCreator(roleIndexMap.get(req.body.creatorRole), req.body.caseCreator, processAddress, {
+                                                                                        from: req.body.caseCreator,
+                                                                                        gas: 4700000
+                                                                                    },
+                                                                                    (error1, result1) => {
+                                                                                        if (result1) {
+                                                                                            console.log("Case-creator nominated ");
+                                                                                            caseCreatorMap.set(result1, processAddress);
+                                                                                            console.log('----------------------------------------------------------------------------------------------');
+                                                                                            res.status(200).send({
+                                                                                                address: processAddress, 
+                                                                                                gas: web3.eth.getTransactionReceipt(resEvt.transactionHash).gasUsed,
+                                                                                                runtimeAddress: contract.address.toString(),
+                                                                                                runtimeGas: policyGas,
+                                                                                                transactionHash: result1,
+                                                                                            });
+                                                                                        }
+                                                                                        else {
+                                                                                            console.log('ERROR ', error1);
+                                                                                            console.log('----------------------------------------------------------------------------------------------');
+                                                                                            res.status(200).send({ERROR: error1});
+                                                                                        }
+                                                                                    })
+                                                                                }
+                                                                            } else {
+                                                                                console.log('ERROR ', errEvt);
+                                                                                console.log('----------------------------------------------------------------------------------------------');
+                                                                                res.status(400).send(errEvt);
+                                                                            }
+                                                                        });
+                                                                    } else {
+                                                                        console.log('ERROR ', errNew);
+                                                                        console.log('----------------------------------------------------------------------------------------------');
+                                                                        res.status(400).send(errNew);
+                                                                    }
+                                                                });
                                                         }
-                                                    } else {
-                                                        console.log('ERROR ', errEvt);
-                                                        console.log('----------------------------------------------------------------------------------------------');
-                                                        res.status(400).send(errEvt);
-                                                    }
-                                                });
-                                            } else {
-                                                console.log('ERROR ', errNew);
-                                                console.log('----------------------------------------------------------------------------------------------');
-                                                res.status(400).send(errNew);
+                                                    });   
                                             }
                                         });
                                 }
-                            });   
-                    }
-                });
-        }
+                            } else {
+                                console.log('UNDEFINED POLICY CONTRACT');
+                                res.status(400).send({'state' : 'UNDEFINED POLICY CONTRACT'});
+                                return;
+                            }
+                        })
+
+                } else {
+                    console.log('Task-Role Contract NOT found');
+                    res.status(404).send('Task-Role Contract NOT found');
+                    console.log('----------------------------------------------------------------------------------------------');
+                }
+        })
     } else
         res.status(404).send('Process model not found');
 });

@@ -17,7 +17,11 @@ contract AbstractRegistry {
     function worklistBundleFor(address worklist) public returns(bytes32);
 
     // Functions for Dynamic Bindings
-    function bindingPolicyFor(address processInstance) public view returns(address);
+    function bindingPolicyFor(address processInstance) public view returns(bytes32);
+
+    function taskRoleMapFor(address processInstance) public view returns(bytes32);
+
+    function relateProcessToPolicy(bytes32 bundleId, bytes32 _taskRole, bytes32 _policy) external;
 
     function canPerform(address actor, address processCase, uint taskIndex) external view returns(bool);
 }

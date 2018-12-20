@@ -15,9 +15,9 @@ const Prism = require('prismjs');
   templateUrl: './dashboard.component.html'
 })
 export class DashboardComponent {
-
   toSearch = '';
   rootProcess = '';
+  policyId = '';
   registryAddress = '';
 
   bindingPolicy = '';
@@ -147,7 +147,9 @@ export class DashboardComponent {
      this.processStorage.createProcessRegistry();
   }
 
-
+  loadProcessRegistry() {
+    this.processStorage.loadProcessRegistry(this.registryAddress);
+  }
 
   openModeler() {
     this.router.navigateByUrl('/modeler');
@@ -163,7 +165,7 @@ export class DashboardComponent {
   }
 
   createTaskRole() {
-    this.processStorage.createTaskRole(this.rootProcess);
+    this.processStorage.createTaskRole(this.rootProcess, this.policyId);
   }
 
   updateInstances(proc) {

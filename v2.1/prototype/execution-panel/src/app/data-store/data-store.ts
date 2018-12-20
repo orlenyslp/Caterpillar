@@ -37,12 +37,12 @@ export class ProcessStorage {
     }
   }
 
-  createTaskRole(rootProcess) {
+  createTaskRole(rootProcess, policyId) {
     if (rootProcess.length < 1)
         alert('Root proces Id cannot be empty.');
     else {
       this.http
-      .post('http://localhost:3000/resources/task-role', { rootProc: rootProcess })
+      .post('http://localhost:3000/resources/task-role', { rootProc: rootProcess, policyId: policyId })
       .subscribe(
         (resp) => {
           console.log(resp.json());
@@ -114,6 +114,19 @@ vote(rNominator, rNominee, rEndorser, endorser, pCase, onNomination, isAccepted)
       (error) => { 
         console.log('ERROR: ', error);
       });
+  }
+
+  loadProcessRegistry(registryAddress: string) {
+    this.http
+    .post('http://localhost:3000/registry/load', {from: registryAddress})
+    .subscribe(
+      (resp) => {
+        console.log('SUCCESS: ', resp.json());
+    },
+    (error) => { 
+      console.log('ERROR: ', error);
+    });
+
   }
 
 

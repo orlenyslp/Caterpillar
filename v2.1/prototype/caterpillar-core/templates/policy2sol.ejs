@@ -116,9 +116,9 @@ contract <%= policyName %>_Contract {
 <%      setMask = disjunctionSetMask(statement.endorsementConstraint);
         fOr = true; fAnd = true -%>
             if (isAccepted && (<% setMask.forEach(andS => { -%><%= !fOr ? '|| ' : '' -%>endorsedBy & <%= andS %> == <%= andS %><% fOr = false;}) -%>))
-                return 3;
-            else if (!isAccepted && (<% setMask.forEach(andS => { -%><% if(!fAnd) { -%> && <% } -%>rejectedBy & <%= andS %> != 0<% fAnd = false;}) -%>))
                 return 0;
+            else if (!isAccepted && (<% setMask.forEach(andS => { -%><% if(!fAnd) { -%> && <% } -%>rejectedBy & <%= andS %> != 0<% fAnd = false;}) -%>))
+                return 3;
         }
 <%  elseCond = true; }}) -%>
         return 2;

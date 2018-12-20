@@ -20,9 +20,9 @@
                   <div class="col-lg-5">
                     <div class="input-group">
                       <span class="input-group-btn">
-                        <button class="btn btn-primary" type="button">Load Registry From </button>
+                        <button class="btn btn-primary" (click)="loadProcessRegistry()">Load Registry From </button>
                       </span>
-                      <input type="text" class="form-control" [(ngModel)]="registryAddress" placeholder="Registry address">
+                      <input type="text" class="form-control" [(ngModel)]="registryAddress" placeholder="Registry address or ID in Repository">
                     </div><!-- /input-group -->
                   </div><!-- /.col-lg-6 -->
                 </div>
@@ -62,6 +62,7 @@
                                 <button type="submit" class="btn btn-success" (click)="createTaskRole()"> Deploy TaskRoleMap From </button>
                               </span>
                               <input type="text" class="form-control" [(ngModel)]="rootProcess" placeholder="Process ID in Repository">
+                              <input type="text" class="form-control" [(ngModel)]="policyId" placeholder="Policy ID in Repository">
                           </div><!-- /input-group -->
                       </div>
                     </div>

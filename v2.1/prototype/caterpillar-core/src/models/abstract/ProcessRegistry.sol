@@ -7,15 +7,15 @@ contract IFunct {
     function setWorklist(address _worklist) public;
     function startInstanceExecution(address processAddress) public;
     function newInstance(address parent, address globalFactory) public returns(address);
+    function findParent() public view returns(address);
 }
 
 contract ProcessRegistry {
 
     mapping (bytes32 => mapping (uint => bytes32)) private parent2ChildrenBundleId;
     mapping (bytes32 => address) private factories;
-    mapping (bytes32 => address) private policy;
-    mapping (bytes32 => address) private taskRole;
-
+    mapping (bytes32 => bytes32) private policy;
+    mapping (bytes32 => bytes32) private taskRole;
 
     mapping (address => bytes32) private instance2Bundle;
     mapping (address => address) private instance2PolicyOp;
@@ -40,14 +40,12 @@ contract ProcessRegistry {
     function findRuntimePolicy(address pCase) public view returns(address) {
         return instance2PolicyOp[pCase];
     }
-    
-    function registerPolicy(bytes32 bundleId, address _policy) external {
+
+    function relateProcessToPolicy(bytes32 bundleId, bytes32 _policy, bytes32 _taskRole) external {
+        taskRole[bundleId] = _taskRole;
         policy[bundleId] = _policy;
     }
 
-    function registerTaskRole(bytes32 bundleId, address _taskRole) external {
-        taskRole[bundleId] = _taskRole;
-    }
 
     function addChildBundleId(bytes32 parentBundleId, bytes32 processBundleId, uint nodeIndex) external {
         parent2ChildrenBundleId[parentBundleId][nodeIndex] = processBundleId;
@@ -73,12 +71,36 @@ contract ProcessRegistry {
         return instances;
     }
     
-    function policyFor(address procInstance) external view returns(address) {
-        return policy[instance2Bundle[procInstance]];
+    function bindingPolicyFor(address procInstance) external view returns(bytes32) {
+        bytes32 pId = instance2Bundle[procInstance];
+        address pAddr = procInstance;
+        while(policy[pId].length != 0) {
+            pAddr = IFunct(pAddr).findParent();
+            if(pAddr == 0)
+                break;
+            pId = instance2Bundle[pAddr];
+        }
+        return policy[pId];
     }
 
-    function taskRoleFor(address procInstance) external view returns(address) {
-        return taskRole[instance2Bundle[procInstance]];
+    function taskRoleMapFor(address procInstance) external view returns(bytes32) {
+        bytes32 pId = instance2Bundle[procInstance];
+        address pAddr = procInstance;
+        while(taskRole[pId].length != 0) {
+            pAddr = IFunct(pAddr).findParent();
+            if(pAddr == 0)
+                break;
+            pId = instance2Bundle[pAddr];
+        }
+        return taskRole[pId];
+    }
+
+    function bindingPolicyFromId(bytes32 procId) external view returns(bytes32) {
+        return policy[procId];
+    }
+
+    function taskRoleMapFromId(bytes32 procId) external view returns(bytes32) {
+        return taskRole[procId];
     }
 
     function bundleFor(address processInstance) external view returns(bytes32) {

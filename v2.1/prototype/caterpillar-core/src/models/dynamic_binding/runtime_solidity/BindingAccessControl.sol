@@ -128,8 +128,11 @@ contract BindingAccessControl {
         // The storage is only updated if the endorsment is valid and thus performed.
         roleBindingState[iCase][rNominee].bindingState = state;
         updateVoteMask(iCase, rNominee, uint(1) << rEndorser, isAccepted);
-        if (state == 3)
-            actorRoles[roleVState.nominee] |= ((uint(1) << rNominee));
+        if (state == 0 || state == 3) {
+            roleBindingState[iCase][rNominee].endorsedBy = roleBindingState[iCase][rNominee].rejectedBy = 0;
+            if (state == 3) 
+                actorRoles[roleVState.nominee] |= ((uint(1) << rNominee));
+        }
         return state;
     }
     
@@ -153,7 +156,7 @@ contract BindingAccessControl {
             actorRoles[roleRState.nominee] &= ~(uint(1) << rNominee);
         }
         else
-           roleBindingState[iCase][rNominee].bindingState = 2;
+           roleBindingState[iCase][rNominee].bindingState = 1;
     }
     
     function voteR (uint rNominator, uint rNominee, uint rEndorser, address endorser, address pCase, bool isAccepted) public returns(uint) {
@@ -173,13 +176,16 @@ contract BindingAccessControl {
             
         roleBindingState[iCase][rNominee].bindingState = state;
         updateVoteMask(iCase, rNominee, uint(1) << rEndorser, isAccepted);
-        if (state == 0)
-            actorRoles[roleVRState.nominee] &= ~(uint(1) << rNominee);
+        if (state == 0 || state == 3) {
+            roleBindingState[iCase][rNominee].endorsedBy = roleBindingState[iCase][rNominee].rejectedBy = 0;
+            if (state == 0)
+                actorRoles[roleVRState.nominee] &= ~(uint(1) << rNominee);
+        }
         return state;
     }
         
     
-    function canPerform(address actor, address pCase, uint taskIndex) public returns(bool) {
+    function canPerform(address actor, address pCase, uint taskIndex) public view returns(bool) {
         bytes32 pId = ControlFlow(registry).bundleFor(pCase);
         uint tRole = ControlFlow(taskRoleAdr).getRoleFromTask(taskIndex, pId);
         uint iCase = caseIndex[pCase];
