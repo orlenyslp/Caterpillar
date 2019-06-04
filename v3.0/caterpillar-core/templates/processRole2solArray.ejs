@@ -1,0 +1,16 @@
+pragma solidity ^0.4.25;
+
+contract <%= contractName %>_Contract {
+
+    function getRoleFromTask(uint taskIndex, bytes32 processId) public pure returns(uint) {
+<%  for (let [key, indexes] of processData) { 
+    let first = true; -%>
+        if (processId == '<%= key %>') {
+            uint[<%= indexes.length %>] memory I<%= key %> = [<% indexes.forEach(ind => { if (!first) { %>, <%= ind %><% } else { first = false; %>uint(<%= ind %>)<% } }) %>];
+            if(taskIndex < <%= indexes.length %>)
+                return I<%= key %>[taskIndex];
+        }
+<% } -%>
+        return 0;
+    }
+}

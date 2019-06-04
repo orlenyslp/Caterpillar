@@ -1,0 +1,49 @@
+pragma solidity ^0.4.25;
+
+import "AbstractWorklist";
+
+contract <%= nodeName(processId()) %>_AbstractWorlist {
+
+  <%  groupedIds = getWorkItemsGroupByParameters(true);
+      groupedIds.forEach(idGroup => {
+          var nodeId = idGroup[0]; -%>
+    function <%= nodeName(nodeId) %>_start(uint<%= getParameterType(nodeId, true, true, true) %>) external;
+  <% }) -%>
+
+  <%  groupedIds = getWorkItemsGroupByParameters(false);
+      groupedIds.forEach(idGroup => {
+          var nodeId = idGroup[0]; -%>
+    function <%= nodeName(nodeId) %>_complete(uint<%= getParameterType(nodeId, false, true, true) %>) external;
+  <% }) -%>
+
+}
+
+contract <%= nodeName(processId()) %>_Worklist is AbstractWorklist {
+
+    // Events with the information to include in the Log when a workitem is registered
+<%  groupedIds = getWorkItemsGroupByParameters(true);
+    groupedIds.forEach(idGroup => { -%>
+    event <%= nodeName(idGroup[0]) %>_Requested(uint<%= getParameterType(idGroup[0], true, true, true) %>);
+<% }) -%>
+
+<%  groupedIds = getWorkItemsGroupByParameters(true);
+    groupedIds.forEach(idGroup => {
+        var nodeId = idGroup[0]; -%>
+    function <%= nodeName(nodeId) %>_start(uint elementIndex<%= getParameters(nodeId, true, true, true) %>) external {
+        workitems.push(Workitem(elementIndex, msg.sender));
+        <%= nodeName(nodeId) %>_Requested(workitems.length - 1<%= getParameters(nodeId, true, false, true) %>);
+    }
+<% }) -%>
+
+<%  groupedIds = getWorkItemsGroupByParameters(false);
+    groupedIds.forEach(idGroup => {
+        var nodeId = idGroup[0]; -%>
+    function <%= nodeName(nodeId) %>(uint workitemId<%= getParameters(nodeId, false, true, true) %>) external {
+        require(workitemId < workitems.length && workitems[workitemId].processInstanceAddr != address(0) && 
+        canPerform(msg.sender, workitems[workitemId].processInstanceAddr, workitems[workitemId].elementIndex));
+        <%= nodeName(processId()) %>_AbstractWorlist(workitems[workitemId].processInstanceAddr).<%= nodeName(nodeId) %>_complete(workitems[workitemId].elementIndex<%= getParameters(nodeId, false, false, true) %>);
+        workitems[workitemId].processInstanceAddr = address(0);
+    }
+<% }) -%>
+
+}

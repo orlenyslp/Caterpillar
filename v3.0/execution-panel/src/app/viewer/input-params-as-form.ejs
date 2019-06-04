@@ -1,0 +1,51 @@
+<div class="well input-params">
+
+<label> Performer User Account Address: </label>
+<input type="text" class="form-control" id="user_address">
+<% if(pCases.length > 1) { %>
+<hr>
+<label> Available Process Cases: </label>
+<select id="pCase" class="form-control">
+  <% for(var i = 0; i < pCases.length; i++) { %>
+    <option value='<%= i %>'><%= pCases[i] %></option>
+  <% } %>
+</select>
+<% } %>
+<hr>
+
+<ul class="nav nav-tabs">
+  <li class="active"><a data-toggle="tab" href="#home"> Input Parameters </a></li>
+</ul>
+
+<div class="tab-content">
+  <div id="home" class="tab-pane fade in active">
+  <% if(inputs.length == 0 ) { %>
+       <h3> NO INPUT DATA REQUIRED </h3>
+  <% } else { inputs.forEach( function (input) {
+        if (input.type.match(/^uint\d*$/)) { %>
+      <div class="form-group">
+        <label><%= input.name %>:</label>
+        <input type="number" class="form-control" value="" id="<%= input.name %>">
+      </div>
+    <%  } else if (input.type === 'bool') { %>
+      <div class="form-group">
+        <label><%= input.name %>:</label>
+        <input type="checkbox" class="form-control" id="<%= input.name %>">
+      </div>
+    <%  } else { %>
+      <div class="form-group">
+        <label for="<%= input.name %>"><%= input.name %>:</label>
+        <input type="text" class="form-control" id="<%= input.name %>">
+      </div>
+    <% }}) } %>
+  </div>
+  <hr>
+</div>
+
+<hr>
+
+  <button type="button" class="btn btn-default" id="<%= nodeId %>_save"> Accept </button>
+  <button type="button" class="btn btn-default" id="<%= nodeId %>_cancel"> Cancel </button>
+
+
+</div>
