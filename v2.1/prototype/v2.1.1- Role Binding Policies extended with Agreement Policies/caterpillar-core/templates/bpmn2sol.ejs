@@ -1,0 +1,653 @@
+
+import "AbstractFactory";
+import "AbstractProcess";
+import "AbstractRegistry";
+<% if(oracleTaskMap.size > 0) { -%>
+contract Oracle_Wrapper {
+<% oracleTaskMap.forEach((oracleKey, nodeId, map) => { -%>
+    function <%= getOracleFunction(nodeId) %> (<%= typeParameters(nodeId, true, false) %>, function (uint<%= typeParameters(nodeId, false, true) %>) external returns(bool)) external returns(uint);
+<% }) -%>
+}
+<% } -%>
+
+contract <%= nodeName(processId()) %>_Factory is AbstractFactory {
+    function newInstance(address parent, address processRegistry) public returns(address) {
+        <%= nodeName(processId()) %>_Contract newContract = new <%= nodeName(processId()) %>_Contract(parent, worklist, processRegistry);
+        return newContract;
+    }
+
+    function startInstanceExecution(address processAddress) public {
+        <%= nodeName(processId()) %>_Contract(processAddress).startExecution();
+    }
+}
+
+<% var contracts2Call = getContracts2Call();
+   var subprocessToKill = getPossibleKillSubprocess();
+   var eventsToCatch = getCatchingEvents(processId());
+   var eventTypes = allEventTypes(); -%>
+
+contract <%= nodeName(processId()) %>_Contract is AbstractProcess {
+
+    uint public marking = uint(<%= subprocessStartMarking(processId()) %>);
+    uint public startedActivities = 0;
+<% if(contracts2Call.length > 0) { -%>
+    address[] private subInstanceAddresses;
+    mapping(uint => uint) private subInstanceStartedIndexes;
+<% } -%>
+
+<% /* --------- Solidity events to throw when an end message event is thrown  ---------------------------- */ -%>
+<% var messages = getThrowingMessages();
+   if(messages.length > 0) {
+    messages.forEach(nodeId => { -%>
+    // <%= nodeName(nodeId) %>
+    event <%= nodeId %>_Mesage(bytes32 messageText);
+<% })} -%>
+
+<% /* --------- Fields for interacting with external resources by means of callbacks (Oracle)  --------------- */ -%>
+<% if(oracleInfo.size > 0) { -%>
+    mapping(uint => address) oracleAddresses;
+<% } -%>
+    // Process Variables
+    <%= globalDeclarations() -%>
+
+    function <%= nodeName(processId()) %>_Contract(address _parent, address _worklist, address _processRegistry) public AbstractProcess(_parent, _worklist, _processRegistry) {
+<% oracleTaskMap.forEach((oracleKey, nodeId, map) => { -%>
+        oracleAddresses[<%= flowNodeIndex(nodeId) %>] = <%= oracleInfo.get(oracleKey).address %>;
+<% }) -%>
+<% if(getCountExternalTasks() > 0) { -%>
+        for (uint i = 0; i < <%= getCountExternalTasks() %>; i++)
+            requestedID.push(0);
+<% } -%>
+    }
+
+    function startExecution() public {
+        require(marking == uint(<%= subprocessStartMarking(processId()) %>) && startedActivities == 0);
+        step(uint(<%= subprocessStartMarking(processId()) %>), 0);
+    }
+
+<% /* --------------------------------- Event Handling ---------------------------------- */ -%>
+    function handleEvent(bytes32 code, bytes32 eventType, uint _instanceIndex, bool isInstanceCompleted) public {
+<% if(contracts2Call.length > 0 ) { -%>
+        var (tmpMarking, tmpStartedActivities) = (marking, startedActivities);
+        uint maskIndex = uint(1) << _instanceIndex;
+        uint sourceChild = 0;
+<%   var first = true;
+       contracts2Call.forEach(nodeId => {
+          var inFirst = true;
+          var node = nodeMap.get(nodeId); -%>
+<% if(first) { first = false; -%>        if <% } else { -%>        else if <% }-%>(subInstanceStartedIndexes[<%= nodeRealIndex(nodeId) %>] & uint(maskIndex) != 0) {
+            if(isInstanceCompleted)
+                subInstanceStartedIndexes[<%= nodeRealIndex(nodeId) %>] &= uint(~maskIndex);
+<% if(is(node, 'bpmn:BoundaryEvent')) { -%>
+<% var terminateCandidates = getTerminateCandidates(processId());
+     if(terminateCandidates.length > 0 ) {
+       terminateCandidates.forEach(bEvtId => {
+         var evtParentId = nodeMap.get(bEvtId).$parent.id;
+         if (inFirst && evtParentId === node.$parent.id) {
+            inFirst = false; -%>
+            if(eventType == "Terminate") {
+  <%     if(evtParentId === processId()) { -%>
+                killProcess();
+                propagateEvent('Default', 'Default', 0, 0, <%= flowNodeIndex(nodeId) %>);
+  <%     } else { -%>
+                (tmpMarking, tmpStartedActivities) = killProcess(uint(<%= flowNodeIndex(evtParentId) %>), tmpMarking, tmpStartedActivities);
+                step(tmpMarking | uint(<%= postMarking(evtParentId) %>), tmpStartedActivities);
+  <%     } -%>
+            }
+  <% } }) } -%>
+<% } -%>
+<% if(inFirst) { inFirst = false; -%>            if <% } else { -%>            else if <% }-%>(eventType == "Default") {
+<% if (node.loopCharacteristics && node.loopCharacteristics.$type === 'bpmn:MultiInstanceLoopCharacteristics') { -%>
+<%   if (node.loopCharacteristics.isSequential) { -%>
+                if(++_instanceIndex < subInstanceAddresses.length && subInstanceAddresses[_instanceIndex] == 0) {
+                    AbstractProcess child_<%= flowNodeIndex(nodeId) %> = AbstractProcess(AbstractRegistry(processRegistry).newInstanceFor(uint(<%= nodeRealIndex(nodeId) %>), this));
+                    subInstanceStartedIndexes[<%= nodeRealIndex(nodeId) %>] |= (uint(1) << _instanceIndex);
+                    subInstanceAddresses[_instanceIndex] = child_<%= flowNodeIndex(nodeId) %>;
+                    child_<%= flowNodeIndex(nodeId) %>.setInstanceIndex(_instanceIndex);
+                }
+                else {
+                    step(tmpMarking | uint(<%= postMarking(nodeId) %>), tmpStartedActivities & uint(~<%= flowNodeIndex(nodeId) %>));
+                }
+<%  } else { -%>
+                if (subInstanceStartedIndexes[<%= nodeRealIndex(nodeId) %>] == 0)
+                    step(tmpMarking | uint(<%= postMarking(nodeId) %>), tmpStartedActivities & uint(~<%= flowNodeIndex(nodeId) %>));
+<% }} else if(!is(node, 'bpmn:BoundaryEvent') && !node.triggeredByEvent) { -%>
+                step(tmpMarking | uint(<%= postMarking(nodeId) %>), tmpStartedActivities & uint(~<%= flowNodeIndex(nodeId) %>));
+<% } else { -%>
+                tmpStartedActivities &= uint(~<%= flowNodeIndex(nodeId) %>);
+                (marking, startedActivities) = (tmpMarking, tmpStartedActivities);
+                if(tmpMarking | tmpStartedActivities == 0)
+                    propagateEvent("<%= nodeName(nodeId) %>", "Default", tmpMarking, tmpStartedActivities, uint(<%= flowNodeIndex(nodeId) %>));
+<% } -%>
+            }
+<% if(eventsToCatch.length > 0) { -%>
+            else
+                sourceChild |= uint(<%= flowNodeIndex(nodeId) %>);
+<% } -%>
+        }
+<% }) -%>
+<% first = true;
+   eventsToCatch.forEach(evtId => {
+   var nodeEvt = nodeMap.get(evtId);
+   var evtType = eventType(evtId); -%>
+<% if (evtType === 'Error' || evtType === 'Escalation') {
+          var candidateSubprocMask = getProcessCandidatesMaskFrom(evtId, evtType, nodeName(evtId), contracts2Call, eventsToCatch); -%>
+<% if(first) { first = false; -%>        if <% } else { -%>        else if <% }-%>(eventType == "<%= evtType %>" && code == "<%= nodeName(evtId) %>" && sourceChild & uint(<%= candidateSubprocMask %>) != 0) {
+<%    if(isInterrupting(evtId)) {
+        if(nodeEvt.$parent.triggeredByEvent) {
+          var startingKill = nodeEvt.$parent.$parent.id === processId() ? 0 : flowNodeIndex(nodeEvt.$parent.$parent.id); -%>
+            (tmpMarking, tmpStartedActivities) = killProcess(uint(<%= startingKill %>), tmpMarking, tmpStartedActivities);
+            step(tmpMarking | uint(<%= subprocessStartMarking(nodeEvt.$parent.id) %>), tmpStartedActivities | uint(<%= flowNodeIndex(nodeEvt.$parent.id) %>));
+<%            } else { -%>
+            (tmpMarking, tmpStartedActivities) = killProcess(uint(<%= flowNodeIndex(nodeEvt.attachedToRef.id) %>), tmpMarking, tmpStartedActivities);
+            step(tmpMarking | uint(<%= postMarking(evtId) %>), tmpStartedActivities);
+<%            } -%>
+<%          } else {  -%>
+            createNewSubprocessInstance(<%= nodeRealIndex(evtId) %>);
+<% if (nodeEvt.attachedToRef) {
+      let nodeId = nodeEvt.attachedToRef.id;
+      let node = nodeMap.get(nodeId);
+      if (node.loopCharacteristics && node.loopCharacteristics.$type === 'bpmn:MultiInstanceLoopCharacteristics') {
+        if (node.loopCharacteristics.isSequential) { -%>
+            if(++_instanceIndex < subInstanceAddresses.length && subInstanceAddresses[_instanceIndex] == 0) {
+                AbstractProcess child_<%= flowNodeIndex(nodeId) %> = AbstractProcess(AbstractRegistry(processRegistry).newInstanceFor(uint(<%= nodeRealIndex(nodeId) %>), this));
+                subInstanceStartedIndexes[<%= nodeRealIndex(nodeId) %>] |= (uint(1) << _instanceIndex);
+                subInstanceAddresses[_instanceIndex] = child_<%= flowNodeIndex(nodeId) %>;
+                child_<%= flowNodeIndex(nodeId) %>.setInstanceIndex(_instanceIndex);
+                step(tmpMarking, tmpStartedActivities | uint(<%= flowNodeIndex(evtId) %>));
+            }
+            else {
+                step(tmpMarking | uint(<%= postMarking(nodeId) %>), tmpStartedActivities & uint(~<%= flowNodeIndex(nodeId) %>) | uint(<%= flowNodeIndex(evtId) %>));
+            }
+<%      } else { -%>
+            if (subInstanceStartedIndexes[<%= nodeRealIndex(nodeId) %>] == 0)
+                step(tmpMarking | uint(<%= postMarking(nodeId) %>), tmpStartedActivities & uint(~<%= flowNodeIndex(nodeId) %>) | uint(<%= flowNodeIndex(evtId) %>));
+<% }} else if(!is(node, 'bpmn:BoundaryEvent') && !node.triggeredByEvent) { -%>
+            step(tmpMarking | uint(<%= postMarking(nodeId) %>), tmpStartedActivities & uint(~<%= flowNodeIndex(nodeId) %>) | uint(<%= flowNodeIndex(evtId) %>));
+<% } -%>
+<% } else { -%>
+            step(tmpMarking, tmpStartedActivities | uint(<%= flowNodeIndex(evtId) %>));
+<%   }      } -%>
+            }
+<%  } -%>
+<% }); -%>
+        else {
+            (tmpMarking, tmpStartedActivities) = propagateEvent(code, eventType, tmpMarking, tmpStartedActivities, sourceChild);
+            step(tmpMarking, tmpStartedActivities);
+        }
+<% } else { -%>
+        // Process without calls to external contracts.
+        // No events to catch !!!
+<% } -%>
+    }
+
+<% /* --------------------------------- Kill Childrens & Broadcast ------------------------------ */ -%>
+    function killProcess() public {
+        (marking, startedActivities) = killProcess(0, marking, startedActivities);
+    }
+
+    function killProcess(uint processElementIndex, uint tmpMarking, uint tmpStartedActivities) internal returns(uint, uint) {
+<% if(contracts2Call.length == 0) {         /* Case No External contract call in the contract */ -%>
+        if(processElementIndex == 0)
+            tmpMarking = tmpStartedActivities = 0;
+<% if(subprocessToKill.length > 0) { -%>
+<%     subprocessToKill.forEach(subprocId => { -%>
+        else if(processElementIndex & uint(<%= flowNodeIndex(subprocId) %>) != 0) {
+            tmpMarking &= uint(~<%=subprocessFullMarking(subprocId)%>);
+            tmpStartedActivities &= uint(~<%= subprocessNodeFullMarking(subprocId) %>);
+        }
+<%      }) }
+} else {                                    /* Case External Contract Calls in Main contract */ -%>
+        uint externalContracts2Stop = 0;
+        uint allAddresses2Stop = 0;
+        if(processElementIndex == 0) {
+            tmpMarking = tmpStartedActivities = 0;
+<% var getContracts2CallMask = getContracts2CallMaskFrom(processId(), contracts2Call);
+   if(getContracts2CallMask > 0) { -%>
+            externalContracts2Stop = uint(<%= getContracts2CallMask %>);
+<% } -%>
+        }
+<% subprocessToKill.forEach(subprocId => { -%>
+        else if(processElementIndex & uint(<%= flowNodeIndex(subprocId) %>) != 0) {
+<% if(callActivities.indexOf(subprocId) >= 0) { -%>
+            externalContracts2Stop = uint(<%= flowNodeIndex(subprocId) %>);
+<% } else { -%>
+            tmpMarking &= uint(~<%= subprocessFullMarking(subprocId) %>);
+            tmpStartedActivities &= uint(~<%= subprocessNodeFullMarking(subprocId) %>);
+<%  var contracts2CallMask = getContracts2CallMaskFrom(subprocId, contracts2Call);
+    if (contracts2CallMask !== 0) { -%>
+            externalContracts2Stop = uint(<%= contracts2CallMask %>);
+<% } -%>
+<% } -%>
+        }
+<%  }) -%>
+<% contracts2Call.forEach(subprocId => { -%>
+        if(externalContracts2Stop & uint(<%= flowNodeIndex(subprocId) %>) != 0) {
+            allAddresses2Stop |= subInstanceStartedIndexes[<%= nodeRealIndex(subprocId) %>];
+            subInstanceStartedIndexes[<%= nodeRealIndex(subprocId) %>] = 0;
+        }
+<% }) -%>
+        for(uint j = 0; j < subInstanceAddresses.length; j++)
+            if(allAddresses2Stop & (uint(1) << j) != 0)
+                AbstractProcess(subInstanceAddresses[j]).killProcess();
+<% } -%>
+        return (tmpMarking, tmpStartedActivities);
+    }
+
+    function broadcastSignal() public {
+        var (tmpMarking, tmpStartedActivities) = broadcastSignal(marking, startedActivities, 0);
+        step(tmpMarking, tmpStartedActivities);
+    }
+
+    function broadcastSignal(uint tmpMarking, uint tmpStartedActivities, uint sourceChild) internal returns(uint, uint) {
+<% eventsToCatch.forEach(nodeId => {
+     if(eventType(nodeId) === 'Signal') {
+       var node = nodeMap.get(nodeId);
+        if(is(node, 'bpmn:IntermediateCatchEvent')) {
+          if (isPartOfDeferredChoice(nodeId)) { -%>
+        if(tmpMarking & uint(<%= deferredChoiceMarking(nodeId) %>) == uint(<%= deferredChoiceMarking(nodeId) %>))
+            tmpMarking = tmpMarking & uint(~<%= deferredChoiceMarking(nodeId) %>) | uint(<%= postMarking(nodeId) %>);
+<%            var deferredNodeMarking = deferredChoiceNodeMarking(nodeId);
+              if(deferredNodeMarking != 0) { -%>
+            tmpStartedActivities &= uint(~<%= deferredNodeMarking %>);
+<%    } -%>
+<%        } else {      -%>
+        if(tmpMarking & uint(<%= preMarking(nodeId) %>) == uint(<%= preMarking(nodeId) %>))
+            tmpMarking = tmpMarking & uint(~<%= preMarking(nodeId) %>) | uint(<%= postMarking(nodeId) %>);
+<%  }} else if(is(node, 'bpmn:StartEvent')) {
+           var parent = nodeMap.get(node.$parent.id);
+           if (parent.triggeredByEvent) {
+              if (isInterrupting(nodeId)) { -%>
+        if(tmpMarking & uint(~<%= subprocessFullMarking(parent.id) %>) != 0 || tmpStartedActivities & uint(~<%= subprocessNodeFullMarking(parent.id) %>) != 0) {
+            (tmpMarking, tmpStartedActivities) = killProcess(0, tmpMarking, tmpStartedActivities);
+            tmpStartedActivities |= uint(<%= flowNodeIndex(parent.id) %>);
+            tmpMarking |= uint(<%= subprocessStartMarking(parent.id) %>);
+        }
+<%            } else { -%>
+        if(tmpMarking & uint(<%= subprocessFullMarking(processId()) %>) != 0 || tmpStartedActivities & uint(~<%= flowNodeIndex(parent.id) %>) != 0) {
+            createNewSubprocessInstance(<%= nodeRealIndex(nodeId) %>);
+            tmpStartedActivities |= <%= flowNodeIndex(nodeId) %>;
+        }
+<%            } -%>
+<%         } else { -%>
+               /* Starting subprocess (not event subprocess) */
+<%         } -%>
+<%      } else if (is(node, 'bpmn:BoundaryEvent')) { -%>
+        if(tmpStartedActivities & uint(<%= flowNodeIndex(node.attachedToRef.id) %>) != 0) {
+<%          if(isInterrupting(nodeId)) { -%>
+            (tmpMarking, tmpStartedActivities) = killProcess(uint(<%= flowNodeIndex(node.attachedToRef.id) %>), tmpMarking, tmpStartedActivities);
+            tmpMarking |= uint(<%= postMarking(nodeId) %>);
+<%          } else { -%>
+            createNewSubprocessInstance(<%= nodeRealIndex(nodeId) %>);
+            tmpStartedActivities |= uint(<%= flowNodeIndex(nodeId) %>);
+<%          } -%>
+        }
+<% } -%>
+<% }}) -%>
+<% if (contracts2Call.length > 0) { -%>
+        uint contracts2Broadcast = 0;
+<%  contracts2Call.forEach(nodeId => { -%>
+        if (tmpStartedActivities & uint(<%= flowNodeIndex(nodeId) %>) != 0)
+            contracts2Broadcast |= subInstanceStartedIndexes[<%= nodeRealIndex(nodeId) %>];
+<%  }) -%>
+        contracts2Broadcast &= uint(~sourceChild);
+        if(contracts2Broadcast != 0)
+            for(uint j = 0; j < subInstanceAddresses.length; j++)
+                if(contracts2Broadcast & (uint(1) << j) != 0)
+                    AbstractProcess(subInstanceAddresses[j]).broadcastSignal();
+<%  }   -%>
+        return (tmpMarking, tmpStartedActivities);
+    }
+
+<% /* --------------------------------- Functions from BPMN elements -------------------------- */ -%>
+<%  nodeList.forEach( nodeId => {
+        let node = nodeMap.get(nodeId),
+            nodePreMarking = preMarking(nodeId),
+            nodePostMarking = postMarking(nodeId);
+    if (is(node, 'bpmn:ServiceTask')) { -%>
+    // <%= nodeName(node.id) %>
+    function <%= nodeName(node.id) %>_callbak (uint reqId<%= concatParameters(name2Ids.get(nodeName[0]), false, true, true) %>) external returns(bool) {
+        require(msg.sender == oracleAddresses[<%= flowNodeIndex(node.id) %>]);
+        uint index = uint(1) << reqId;
+        if(requestedID[<%= nodeRealIndex(node.id) %>] & index == index) {
+            <%= nodeFunctionBody(nodeId) %>
+            requestedID[<%= nodeRealIndex(node.id) %>] &= ~uint(index);
+            step(marking | uint(<%= nodePostMarking %>), startedActivities);
+            return true;
+        }
+        return false ;
+    }
+<% }}); -%>
+
+<%  boundaryMessages = getMessages();
+    groupedIds = getWorkItemsGroupByParameters(false);
+    groupedIds.forEach(idGroup => { -%>
+    function <%= nodeName(idGroup[0]) %>_complete(uint elementIndex<%= concatParameters(idGroup[0], false, true, true) %>) external {
+        (uint tmpMarking, uint tmpStartedActivities) = (marking, startedActivities);
+<%    idGroup.forEach(nodeId => {
+        var node = nodeMap.get(nodeId); -%>
+        if(elementIndex == uint(<%= nodeRealIndex(nodeId) %>)) {
+            require(msg.sender == worklist && tmpStartedActivities & uint(<%= flowNodeIndex(nodeId) %>) != 0);
+<% if(boundaryMessages.indexOf(nodeId) < 0) {
+     var functionBody = nodeFunctionBody(nodeId);
+     if(functionBody.length > 0) { -%>
+           <%- functionBody %>
+<%   } -%>
+<% if (isPartOfDeferredChoice(nodeId)) {
+          var deferredNodeMarking = deferredChoiceNodeMarking(nodeId);
+          if(deferredNodeMarking != 0) { -%>
+            step(tmpMarking & uint(~<%= deferredChoiceMarking(nodeId) %>) | uint(<%= postMarking(nodeId) %>), tmpStartedActivities & uint(~<%= deferredNodeMarking %>));
+<%        } else { -%>
+            step(tmpMarking & uint(~<%= deferredChoiceMarking(nodeId) %>) | uint(<%= postMarking(nodeId) %>), tmpStartedActivities);
+<%        } -%>
+<% } else { -%>
+            step(tmpMarking | uint(<%= postMarking(nodeId) %>), tmpStartedActivities & uint(~<%= flowNodeIndex(nodeId) %>));
+<% }} else {
+  var parent = nodeMap.get(node.$parent.id);
+  if(parent.triggeredByEvent) { -%>
+<% if (isInterrupting(nodeId)) { -%>
+            killProcess();
+            step(uint(<%= subprocessStartMarking(parent.id) %>), uint(<%= flowNodeIndex(parent.id) %>));
+<% } else { -%>
+            createNewSubprocessInstance(<%= nodeRealIndex(nodeId) %>);
+            step(tmpMarking, tmpStartedActivities | <%= flowNodeIndex(parent.id) %>);
+<%   } -%>
+<% } else {
+    var attachedTo = node.attachedToRef.id;
+    if (isInterrupting(nodeId)) { -%>
+            (tmpMarking, tmpStartedActivities) = killProcess(uint(<%= flowNodeIndex(attachedTo) %>), tmpMarking, tmpStartedActivities);
+            step(tmpMarking | uint(<%= postMarking(nodeId) %>), tmpStartedActivities);
+<%  } else { -%>
+            createNewSubprocessInstance(<%= nodeRealIndex(nodeId) %>);
+            step(tmpMarking, tmpStartedActivities | <%= flowNodeIndex(nodeId) %>);
+<%     }}} -%>
+            return;
+        }
+<% }) -%>
+    }
+<%   }) -%>
+
+<% if(contracts2Call.length > 0) { -%>
+    function createNewSubprocessInstance(uint nodeIndex) private {
+        AbstractProcess child = AbstractProcess(AbstractRegistry(processRegistry).newInstanceFor(nodeIndex, this));
+        uint index = subInstanceAddresses.length;
+        subInstanceAddresses.push(child);
+        subInstanceStartedIndexes[nodeIndex] |= (uint(1) << index);
+        child.setInstanceIndex(index);
+    }
+<% } -%>
+
+<% /* ----------------- Method to resume the execution after updates on the control-flow ------------------ */ -%>
+
+    function resumeInstance(uint element, uint decissionMask) {
+        require(msg.sender == processRegistry);
+        (uint tmpMarking, uint tmpStartedActivities) = (marking, startedActivities);
+<% nodeList.forEach(nodeId => { 
+     var node = nodeMap.get(nodeId);
+     var first = true;
+     if(callActivities.indexOf(nodeId) >= 0) { -%>
+        if(element == <%= nodeRealIndex(nodeId) %> && tmpStartedActivities & uint(~<%= flowNodeIndex(nodeId) %>) != 0) {
+            tmpMarking |= uint(<%= preMarking(nodeId) %>);
+            tmpStartedActivities &= uint(~<%= flowNodeIndex(nodeId) %>);
+        }
+<%   } else if(is(node, 'bpmn:ComplexGateway')) { -%>
+        if(element == <%= nodeRealIndex(nodeId) %> && tmpStartedActivities & uint(~<%= flowNodeIndex(nodeId) %>) != 0 && uint(<%= postMarking(nodeId) %>) & decissionMask != 0) {
+            tmpMarking |= decissionMask;
+            tmpStartedActivities &= uint(~<%= flowNodeIndex(nodeId) %>);
+        }
+<%   } -%>
+<% }); -%>
+        step(tmpMarking, tmpStartedActivities);
+    }
+
+<% /* ----------------- Step: Method to execute internal activities automatically ------------------ */ -%>
+    function step(uint tmpMarking, uint tmpStartedActivities) internal {
+        while (true) {
+<% nodeList.forEach(nodeId => {
+    var node = nodeMap.get(nodeId);
+    var nodePostMarking = postMarking(nodeId);
+    if(catchingMessages.indexOf(nodeId) < 0) {
+        var nodePreMarking = preMarking(nodeId);
+     if (node.loopCharacteristics && node.loopCharacteristics.$type === 'bpmn:MultiInstanceLoopCharacteristics') { -%>
+            if (tmpMarking & uint(<%= nodePreMarking %>) != 0) {
+<%        if(!is (node, "bpmn:Task")) { -%>
+                for(uint i = 0; i < <%= node.loopCharacteristics.loopCardinality ? node.loopCharacteristics.loopCardinality.body : 1 %>; i++) {
+<% if (node.loopCharacteristics.isSequential) { -%>
+                    subInstanceAddresses.push(0);
+<% } else { -%>
+                    createNewSubprocessInstance(<%= nodeRealIndex(nodeId) %>);
+<% } -%>
+                }
+<% if (node.loopCharacteristics.isSequential) { -%>
+                AbstractProcess child_<%= flowNodeIndex(nodeId) %> = AbstractProcess(AbstractRegistry(processRegistry).newInstanceFor(uint(<%= nodeRealIndex(nodeId) %>), this));
+                uint index = subInstanceAddresses.length - <%= node.loopCharacteristics.loopCardinality ? node.loopCharacteristics.loopCardinality.body : 1 %>;
+                subInstanceStartedIndexes[<%= nodeRealIndex(nodeId) %>] |= (uint(1) << index);
+                subInstanceAddresses[index] = child_<%= flowNodeIndex(nodeId) %>;
+                child_<%= flowNodeIndex(nodeId) %>.setInstanceIndex(index);
+<% } -%>
+                tmpMarking &= uint(~<%= nodePreMarking %>);
+                tmpStartedActivities |= <%= flowNodeIndex(nodeId) %>;
+<%      } -%>
+                continue;
+            }
+<% } else if (is(node, 'bpmn:ExclusiveGateway')) { -%>
+            if (tmpMarking & uint(<%= nodePreMarking %>) != 0) {
+                tmpMarking &= uint(~<%= nodePreMarking %>);
+<%          if (node.outgoing && node.outgoing.length > 1) {
+            var i = 0; node.outgoing.forEach( outgoing => { -%>
+<%= i > 0 ? 'else ' : '' %><%if (i < node.outgoing.length - 1){ %>if (<%- getCondition(outgoing) %>)<% } -%>
+                tmpMarking |= uint(<%= flowEdgeIndex(outgoing.id) %>);
+<% i++;}) -%>
+<%          } else { -%>
+                tmpMarking |= uint(<%= postMarking(nodeId) %>);
+<%          } -%>
+                continue;
+            }
+<% } else if(is(node, 'bpmn:ParallelGateway') || is(node,'bpmn:EventBasedGateway')) { -%>
+            if (tmpMarking & uint(<%= nodePreMarking %>) == uint(<%= nodePreMarking %>)) {
+                tmpMarking = tmpMarking & uint(~<%= nodePreMarking %>) | uint(<%= nodePostMarking %>);
+                continue;
+            }
+<% } else if(is(node, 'bpmn:SubProcess') && !node.triggeredByEvent && multiinstanceActivities.indexOf(nodeId) < 0) { -%>
+            if (tmpMarking & uint(<%= nodePreMarking %>) != 0) {
+                tmpStartedActivities |= uint(<%= flowNodeIndex(nodeId) %>);
+                tmpMarking = tmpMarking & uint(~<%= nodePreMarking %>) | uint(<%= subprocessStartMarking(nodeId) %>);
+                continue;
+            }
+<% } else if(is(node, 'bpmn:ReceiveTask')) {
+    if (isPartOfDeferredChoice(nodeId)) { -%>
+            if (tmpStartedActivities & uint(<%= flowNodeIndex(nodeId) %>) == 0 && tmpMarking & uint(<%= deferredChoiceMarking(nodeId) %>) == uint(<%= deferredChoiceMarking(nodeId) %>)) {
+                <%= nodeName(processId()) %>_AbstractWorlist(worklist).<%= nodeName(nodeId) %>_start(<%= nodeRealIndex(nodeId) %><%= concatParameters(nodeId, true, false, true) %>);
+                tmpStartedActivities |= uint(<%= flowNodeIndex(nodeId) %>);
+                continue;
+            }
+<%  } else { -%>
+            if (tmpMarking & uint(<%= nodePreMarking %>) != 0) {
+                <%= nodeName(processId()) %>_AbstractWorlist(worklist).<%= nodeName(nodeId) %>_start(<%= nodeRealIndex(nodeId) %><%= concatParameters(nodeId, true, false, true) %>);
+                tmpMarking &= uint(~<%= nodePreMarking %>);
+                tmpStartedActivities |= uint(<%= flowNodeIndex(node.id) %>);
+                continue;
+            }
+<% }} else if((is(node, 'bpmn:Task'))) { -%>
+            if (tmpMarking & uint(<%= nodePreMarking %>) != 0) {
+<%    if (is(node, 'bpmn:UserTask'))  { -%>
+                <%= nodeName(processId()) %>_AbstractWorlist(worklist).<%= nodeName(nodeId) %>_start(<%= nodeRealIndex(nodeId) %><%= concatParameters(nodeId, true, false, true) %>);
+                tmpMarking &= uint(~<%= nodePreMarking %>);
+                tmpStartedActivities |= uint(<%= flowNodeIndex(node.id) %>);
+<%  } else if(is(node, 'bpmn:ServiceTask')) {
+          var functName = oracleTaskMap.get(nodeId);
+          var localInfo = oracleInfo.get(functName); -%>
+                uint reqId = Oracle_Wrapper(oracleAddresses[<%= flowNodeIndex(nodeId) %>]).<%= localInfo.functionName %>(<%= concatParameters(node.id, true, false, false) %>, this.<%= nodeName(nodeId) %>_callbak);
+                requestedID[<%= nodeRealIndex(node.id) %>] |= uint(1) << reqId;
+                tmpMarking &= uint(~<%= nodePreMarking %>);
+                tmpStartedActivities |= uint(<%= flowNodeIndex(node.id) %>);
+<%  } else if (is(node, 'bpmn:ScriptTask')) {
+         if (node.script) { -%>
+                <%- nodeFunctionBody(nodeId) -%>
+<%       } -%>
+                tmpMarking = tmpMarking & uint(~<%= nodePreMarking %>) | uint(<%= nodePostMarking %>);
+<%  } else { -%>
+                tmpMarking = tmpMarking & uint(~<%= nodePreMarking %>) | uint(<%= nodePostMarking %>);
+<%  } -%>
+                continue;
+            }
+<% } else if(is(node, 'bpmn:ComplexGateway')) { -%>
+            if (tmpMarking & uint(<%= nodePreMarking %>) != 0) {
+                tmpMarking &= uint(~<%= nodePreMarking %>);
+                tmpStartedActivities |= uint(<%= flowNodeIndex(node.id) %>);
+            }
+<% } else if(is(node, 'bpmn:EndEvent')) {
+          var evtType = eventType(nodeId); -%>
+            if (tmpMarking & uint(<%= nodePreMarking %>) != 0) {
+<% if(evtType === 'Default' || evtType === 'Message') { -%>
+<% if(evtType === 'Message') { -%>
+                <%= nodeId %>_Mesage('<%= nodeName(nodeId) %>');
+<% } -%>
+                tmpMarking &= uint(~<%= nodePreMarking %>);
+                if (tmpMarking & uint(<%= subprocessFullMarking(node.$parent.id) %>) == 0 && tmpStartedActivities & uint(<%= subprocessNodeMarking(node.$parent.id) %>) == 0) {
+<% if(node.$parent.id === processId() || nodeMap.get(node.$parent.id).triggeredByEvent || (is(nodeMap.get(processId()), 'bpmn:BoundaryEvent') && node.$parent.id === nodeMap.get(processId()).$parent.id)) { -%>
+<% if(nodeMap.get(node.$parent.id).triggeredByEvent) { -%>
+                    tmpStartedActivities &= uint(~<%= flowNodeIndex(node.$parent.id) %>);
+<% } -%>
+                    (tmpMarking, tmpStartedActivities) = propagateEvent("<%= nodeName(nodeId) %>", "Default", tmpMarking, tmpStartedActivities, uint(<%= flowNodeIndex(nodeId) %>));
+<% } else { -%>
+                    tmpStartedActivities &= uint(~<%= flowNodeIndex(node.$parent.id) %>);
+                    tmpMarking |= uint(<%= postMarking(node.$parent.id) %>);
+<% } -%>
+                }
+<% } else if (evtType === 'Terminate') { -%>
+<% if(is(nodeMap.get(processId()), 'bpmn:BoundaryEvent') && node.$parent.id === nodeMap.get(processId()).$parent.id) { -%>
+                (tmpMarking, tmpStartedActivities) = propagateEvent("<%= nodeName(nodeId) %>", "Terminate", tmpMarking, tmpStartedActivities, uint(<%= flowNodeIndex(nodeId) %>));
+<% } else if(node.$parent.id === processId()) { -%>
+                (tmpMarking, tmpStartedActivities) = killProcess(0, tmpMarking, tmpStartedActivities);
+                (tmpMarking, tmpStartedActivities) = propagateEvent("<%= nodeName(nodeId) %>", "Default", tmpMarking, tmpStartedActivities, uint(<%= flowNodeIndex(nodeId) %>));
+<% } else { -%>
+                (tmpMarking, tmpStartedActivities) = killProcess(uint(<%= flowNodeIndex(node.$parent.id) %>), tmpMarking, tmpStartedActivities);
+                tmpMarking |= uint(<%= postMarking(node.$parent.id) %>);
+                tmpStartedActivities &= uint(~<%= flowNodeIndex(node.$parent.id) %>);
+<% } -%>
+<% } else if (evtType === 'Signal') { -%>
+                tmpMarking &= uint(~<%= nodePreMarking %>);
+                (tmpMarking, tmpStartedActivities) = propagateEvent("<%= nodeName(nodeId) %>", "Signal", tmpMarking, tmpStartedActivities, uint(<%= flowNodeIndex(nodeId) %>));
+<% } else if (evtType === 'Error' || evtType === 'Escalation') {
+        var localEvents2Catch = getCatchingEventsFrom(node.$parent.id, evtType, nodeName(nodeId));
+        if(localEvents2Catch.length == 0) { -%>
+                (tmpMarking, tmpStartedActivities) = propagateEvent("<%= nodeName(nodeId) %>", "<%= evtType %>", tmpMarking & uint(~<%= nodePreMarking %>), tmpStartedActivities, uint(<%= flowNodeIndex(nodeId) %>));
+<%      } else {
+        localEvents2Catch.forEach(evtId => {
+            var nodeEvt = nodeMap.get(evtId);
+            if(isInterrupting(evtId)) {
+              if(nodeEvt.$parent.triggeredByEvent) {
+                 var startingKill = nodeEvt.$parent.$parent.id === processId() ? 0 : flowNodeIndex(nodeEvt.$parent.$parent.id); -%>
+                (tmpMarking, tmpStartedActivities) = killProcess(uint(<%= startingKill %>), tmpMarking & uint(~<%= nodePreMarking %>), tmpStartedActivities);
+                tmpMarking |= uint(<%= subprocessStartMarking(nodeEvt.$parent.id) %>);
+                tmpStartedActivities |= uint(<%= flowNodeIndex(nodeEvt.$parent.id) %>);
+<%            } else { -%>
+                (tmpMarking, tmpStartedActivities) = killProcess(uint(<%= flowNodeIndex(nodeEvt.attachedToRef.id) %>), tmpMarking & uint(~<%= nodePreMarking %>), tmpStartedActivities);
+                tmpMarking |= uint(<%= postMarking(evtId) %>);
+<%            } -%>
+<%          } else {  -%>
+                tmpMarking &= uint(~<%= nodePreMarking %>);
+                createNewSubprocessInstance(<%= nodeRealIndex(evtId) %>);
+                tmpStartedActivities |= uint(<%= flowNodeIndex(evtId) %>);
+<%          } }) -%>
+<%   } } -%>
+                continue;
+            }
+<% } else if(is(node, 'bpmn:IntermediateThrowEvent')) {
+       var evtType = eventType(nodeId); -%>
+            if (tmpMarking & uint(<%= nodePreMarking %>) != 0) {
+<% if(evtType === 'Default') { -%>
+                tmpMarking = tmpMarking & uint(~<%= nodePreMarking %>) | uint(<%= nodePostMarking %>);
+<% } else {
+    if (isPartOfDeferredChoice(nodeId)) { -%>
+                tmpMarking = tmpMarking & uint(~<%= deferredChoiceMarking(nodeId) %>) | uint(<%= nodePostMarking %>);
+<%    var deferredNodeMarking = deferredChoiceNodeMarking(nodeId);
+      if(deferredNodeMarking != 0) { -%>
+              tmpStartedActivities &= uint(~<%= deferredNodeMarking %>);
+<%    } -%>
+<%  } else { -%>
+                tmpMarking = tmpMarking & uint(~<%= nodePreMarking %>) | uint(<%= nodePostMarking %>);
+<%  }  if (evtType === 'Signal') { -%>
+                (tmpMarking, tmpStartedActivities) = propagateEvent("<%= nodeName(nodeId) %>", "Signal", tmpMarking, tmpStartedActivities, uint(<%= flowNodeIndex(nodeId) %>));
+<%  } else if(evtType === 'Message') { -%>
+                <%= nodeId %>_Mesage('<%= nodeName(nodeId) %>');
+<%  } else if(evtType === 'Escalation') {
+          var localEvents2Catch = getCatchingEventsFrom(node.$parent.id, evtType, nodeName(nodeId));
+          if(localEvents2Catch.length == 0) { -%>
+                (tmpMarking, tmpStartedActivities) = propagateEvent("<%= nodeName(nodeId) %>", "<%= evtType %>", tmpMarking & uint(~<%= nodePreMarking %>), tmpStartedActivities, uint(<%= flowNodeIndex(nodeId) %>));
+  <%      } else {
+          localEvents2Catch.forEach(evtId => {
+              var nodeEvt = nodeMap.get(evtId);
+              if(isInterrupting(evtId)) {
+                if(nodeEvt.$parent.triggeredByEvent) {
+                   var startingKill = nodeEvt.$parent.$parent.id === processId() ? 0 : flowNodeIndex(nodeEvt.$parent.$parent.id); -%>
+                (tmpMarking, tmpStartedActivities) = killProcess(uint(<%= startingKill %>), tmpMarking & uint(~<%= nodePreMarking %>), tmpStartedActivities);
+                tmpMarking |= uint(<%= subprocessStartMarking(nodeEvt.$parent.id) %>);
+                tmpStartedActivities |= uint(<%= flowNodeIndex(nodeEvt.$parent.id) %>);
+  <%            } else { -%>
+                (tmpMarking, tmpStartedActivities) = killProcess(uint(<%= flowNodeIndex(nodeEvt.attachedToRef.id) %>), tmpMarking & uint(~<%= nodePreMarking %>), tmpStartedActivities);
+                tmpMarking |= uint(<%= postMarking(evtId) %>);
+  <%            } -%>
+  <%          } else {  -%>
+                tmpMarking &= uint(~<%= nodePreMarking %>);
+                createNewSubprocessInstance(<%= nodeRealIndex(evtId) %>);
+  <% if(nodeEvt.$parent.triggeredByEvent) { -%>
+                tmpStartedActivities |= uint(<%= flowNodeIndex(nodeEvt.$parent.id) %>);
+  <% } else { -%>
+                tmpStartedActivities |= uint(<%= flowNodeIndex(evtId) %>);
+  <% }         } }) -%>
+  <%   } -%>
+<% }} -%>
+                continue;
+            }
+<% } else if (callActivities.indexOf(nodeId) >= 0) { -%>
+            if (tmpMarking & uint(<%= nodePreMarking %>) != 0) {
+                if(AbstractRegistry(processRegistry).hasFactory(nodeIndex, this))
+                    createNewSubprocessInstance(<%= nodeRealIndex(nodeId) %>);
+                tmpMarking &= uint(~<%= nodePreMarking %>);
+                tmpStartedActivities |= uint(<%= flowNodeIndex(nodeId) %>);
+                continue;
+            }
+<% }} else {
+  if(isBoundaryEvent(nodeId)) {
+    var attachedTo = node.attachedToRef.id; -%>
+            if (tmpStartedActivities & uint(<%= flowNodeIndex(attachedTo) %>) != 0 && tmpStartedActivities & uint(<%= flowNodeIndex(nodeId) %>) == 0) {
+                <%= nodeName(processId()) %>_AbstractWorlist(worklist).<%= nodeName(nodeId) %>_start(<%= nodeRealIndex(nodeId) %><%= concatParameters(nodeId, true, false, true) %>);
+                tmpStartedActivities |= uint(<%= flowNodeIndex(nodeId) %>);
+                continue;
+            }
+            if (tmpStartedActivities & uint(<%= flowNodeIndex(attachedTo) %>) == 0 && tmpStartedActivities & uint(<%= flowNodeIndex(nodeId) %>) != 0) {
+                tmpStartedActivities &= uint(~<%= flowNodeIndex(nodeId) %>);
+                continue;
+            }
+  <% } -%>
+<% }}); -%>
+            break;
+        }
+        if(marking != 0 || startedActivities != 0) {
+            marking = tmpMarking;
+            startedActivities = tmpStartedActivities;
+        }
+    }
+
+    function getWorklistAddress() external view returns(address) {
+        return worklist;
+    }
+
+    function getInstanceIndex() external view returns(uint) {
+        return instanceIndex;
+    }
+
+<% /* ------------- Methods to obtain information about multiple contract instances running ------------------ */ -%>
+<% if (callActivities.length > 0 || multiinstanceActivities.length > 0 || nonInterruptingEvents.length > 0) { -%>
+    function allInstanceAddresses() external view returns(address []) {
+        return subInstanceAddresses;
+    }
+
+    function startedInstanceIndexFor(uint instanceNode) external view returns(uint) {
+        return subInstanceStartedIndexes[instanceNode];
+    }
+
+<% } -%>
+}

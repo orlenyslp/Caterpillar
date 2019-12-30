@@ -1,0 +1,127 @@
+pragma solidity ^0.4.25;
+
+contract <%= policyName %>_Contract {
+
+    function isCaseCreator(uint roleIndex) public pure returns(bool) {
+        return <%= creatorMask %> & (uint(1) << roleIndex) == <%= creatorMask %>;
+    }
+
+    function canNominate (uint rNominator, uint rNominee) public pure returns(bool) {
+        uint nomineeMask = uint(1) << rNominee;
+<% taken = [];
+    nominationStatements.forEach(statement => { 
+        if(taken[roleIndex(statement.nominator)] != 1) { 
+          taken[roleIndex(statement.nominator)] = 1;  -%>
+        if (rNominator == <%= roleIndex(statement.nominator) %>)
+            return nomineeMask & <%= nominationMask(statement.nominator, nominationStatements) %> != 0;
+<%     } -%>
+<%  }) -%>
+        return false;
+    }
+
+    function assertNConstraint (uint rNominator, uint rNominee, uint nomineeRoles) public pure returns(bool) {
+        uint nominatorNomineeMask = (uint(1) << rNominator) | (uint(1) << rNominee);
+<%  nominationStatements.forEach(statement => { 
+        if(statement.bindingConstraint !== undefined) { -%>
+        if (nominatorNomineeMask == <%= statementMask(statement) %>)
+<%      setMask = disjunctionSetMask(statement.bindingConstraint);
+        first = true; -%>
+            return<% if(statement.bindingConstraint.isNegative) { %>!(<% } setMask.forEach(andS => { -%> <%= !first ? '||' : '' -%> nomineeRoles & <%= andS %> == <%= andS %><% first = false;}) -%><% if(statement.bindingConstraint.isNegative) { %>)<% } -%>;
+<%  }}) -%>
+        return true;
+    }
+
+    function requireNEndorsement (uint rNominator, uint rNominee) public pure returns(bool) {
+        uint nominatorNomineeMask = (uint(1) << rNominator) | (uint(1) << rNominee);
+<% if(nominationStatements != undefined) { 
+    candidates = endorsementRequiredMask(nominationStatements);
+    first = true;
+    if(candidates.length > 0) { -%>
+        return<% candidates.forEach(andS => { -%> <%= !first ? '||' : '' -%> nominatorNomineeMask == <%= andS %><% first = false;}) -%>;
+<%    } else { -%>
+        return false;
+<% }}-%>
+    }
+
+    function assertNVote (uint rNominator, uint rNominee, uint rEndorser, uint endorsedBy, uint rejectedBy, bool isAccepted) public pure returns(uint) {
+        uint endorserMask = uint(1) << rEndorser;
+        require((endorsedBy | rejectedBy) & endorserMask == 0);
+        uint nominatorNomineeMask = (uint(1) << rNominator) | (uint(1) << rNominee);
+        endorsedBy |= endorserMask;
+        rejectedBy |= endorserMask;
+<%  elseCond = false;
+    nominationStatements.forEach(statement => { 
+        if(statement.endorsementConstraint !== undefined) { -%>
+        <%= elseCond ? 'else ' : '' %>if (nominatorNomineeMask == <%= statementMask(statement) %>) {
+            require(endorserMask & <%= disjunctionSetJoinMask(statement.endorsementConstraint) %> != 0);
+<%      setMask = disjunctionSetMask(statement.endorsementConstraint);
+        fOr = true; fAnd = true -%>
+            if (isAccepted && (<% setMask.forEach(andS => { -%><%= !fOr ? '|| ' : '' -%>endorsedBy & <%= andS %> == <%= andS %><% fOr = false;}) -%>))
+                return 3;
+            else if (!isAccepted && (<% setMask.forEach(andS => { -%><% if(!fAnd) { -%> && <% } -%>rejectedBy & <%= andS %> != 0<% fAnd = false;}) -%>))
+                return 0;
+        }
+<%  elseCond = true; }}) -%>
+        return 2;
+    }
+
+    function canRelease (uint rNominator, uint rNominee) public pure returns(bool) {
+        uint nomineeMask = uint(1) << rNominee;
+<% taken = [];
+    releaseStatements.forEach(statement => { 
+        if(taken[roleIndex(statement.nominator)] != 1) { 
+          taken[roleIndex(statement.nominator)] = 1;  -%>
+        if (rNominator == <%= roleIndex(statement.nominator) %>)
+            return nomineeMask & <%= nominationMask(statement.nominator, releaseStatements) %> != 0;
+<%     } -%>
+<%  }) -%>
+        return false;
+    }
+
+    function assertRConstraint (uint rNominator, uint rNominee, uint nomineeRoles) public pure returns(bool) {
+        uint nominatorNomineeMask = (uint(1) << rNominator) | (uint(1) << rNominee);
+<%  releaseStatements.forEach(statement => { 
+        if(statement.bindingConstraint !== undefined) { -%>
+        if (nominatorNomineeMask == <%= statementMask(statement) %>)
+<%      setMask = disjunctionSetMask(statement.bindingConstraint);
+        first = true; -%>
+            return<% if(statement.bindingConstraint.isNegative) { %>!(<% } setMask.forEach(andS => { -%> <%= !first ? '||' : '' -%> nomineeRoles & <%= andS %> == <%= andS %><% first = false;}) -%><% if(statement.bindingConstraint.isNegative) { %>)<% } -%>;
+<%  }}) -%>
+        return true;
+    }
+
+    function requireREndorsement (uint rNominator, uint rNominee) public pure returns(bool) {
+        uint nominatorNomineeMask = (uint(1) << rNominator) | (uint(1) << rNominee);
+<% if(releaseStatements != undefined) { 
+    candidates = endorsementRequiredMask(releaseStatements);
+    first = true;
+    if(candidates.length > 0) { -%>
+        return<% candidates.forEach(andS => { -%> <%= !first ? '||' : '' -%> nominatorNomineeMask == <%= andS %><% first = false;}) -%>;
+<%    } else { -%>
+        return false;
+<% }}-%>
+    }
+
+    function assertRVote (uint rNominator, uint rNominee, uint rEndorser, uint endorsedBy, uint rejectedBy, bool isAccepted) public pure returns(uint) {
+        uint endorserMask = uint(1) << rEndorser;
+        require((endorsedBy | rejectedBy) & endorserMask == 0);
+        uint nominatorNomineeMask = (uint(1) << rNominator) | (uint(1) << rNominee);
+        endorsedBy |= endorserMask;
+        rejectedBy |= endorserMask;
+<%  elseCond = false;
+    releaseStatements.forEach(statement => { 
+        if(statement.endorsementConstraint !== undefined) { -%>
+        <%= elseCond ? 'else ' : '' %>if (nominatorNomineeMask == <%= statementMask(statement) %>) {
+            require(endorserMask & <%= disjunctionSetJoinMask(statement.endorsementConstraint) %> != 0);
+<%      setMask = disjunctionSetMask(statement.endorsementConstraint);
+        fOr = true; fAnd = true -%>
+            if (isAccepted && (<% setMask.forEach(andS => { -%><%= !fOr ? '|| ' : '' -%>endorsedBy & <%= andS %> == <%= andS %><% fOr = false;}) -%>))
+                return 0;
+            else if (!isAccepted && (<% setMask.forEach(andS => { -%><% if(!fAnd) { -%> && <% } -%>rejectedBy & <%= andS %> != 0<% fAnd = false;}) -%>))
+                return 3;
+        }
+<%  elseCond = true; }}) -%>
+        return 2;
+    }
+
+}

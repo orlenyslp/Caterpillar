@@ -1,0 +1,81 @@
+pragma solidity ^0.4.25;
+
+import 'IData';
+
+contract <%= contractName %>Data is IDataImp {
+<% globalFields.forEach(param => { -%>
+    <%= param.type %> <%= param.name %>;
+<% })  -%>
+
+    function executeScript(uint eInd) public returns(uint) {
+<% taskScripts.forEach((script, cInd) => { -%>
+        if (eInd == <%= cInd%>) {
+            <%= script %>
+            return <%= postC(cInd) %>;
+        }
+<% }) -%>
+<% gatewayScript.forEach((scripts, cInd) => { -%>
+        if (eInd == <%= cInd%>) {
+<% scripts.forEach(arcInf => { -%>
+            if (<%= arcInf.script %>)
+                return <%= elementBitMask(arcInf.edgeInd) %>;
+<% }); -%>
+        }
+<% }); -%>
+    }
+
+<% let checkIn = checkInList;
+   checkIn.forEach(funcInfo => { -%>
+    function checkIn(uint eInd<%= checkInParams(funcInfo.params, funcInfo.renamedParams) %>) public {
+        require (<%= indexArrayToBitSet(funcInfo.eIndexes) %> & (1 << eInd) != 0);
+<%  if(funcInfo.scripts.length > 0 && funcInfo.scripts[0] === undefined) { -%>
+<% } else if (funcInfo.eIndexes.length == 1) {
+    if(funcInfo.scripts.length > 0) { -%>
+        <%= funcInfo.scripts[0] %>
+<% }} else { %>
+<% let first = true;
+   for(let i = 0; i < funcInfo.eIndexes.length; i++) { -%>
+<% if(first) { first = false; -%>
+        if (eInd == <%= funcInfo.eIndexes[i] %>) {
+            <%= funcInfo.scripts[i] %>
+        }
+<% } else { -%>
+        else if (eInd == <%= funcInfo.eIndexes[i] %>) {
+            <%= funcInfo.scripts[i] %>
+        }
+<% } -%>
+<% }} -%>
+        continueExecution(eInd);
+    }
+
+<% }) -%>
+<% let checkOut = checkOutList; 
+   checkOut.forEach(funcInfo => { -%>
+    function <%= funcInfo.funcName %>(uint eInd) public view <%= checkOutReturn(funcInfo.types, 'returns') %> {
+        require (<%= indexArrayToBitSet(funcInfo.eIndexes) %> & (1 << eInd) == 0);
+<% if (funcInfo.eIndexes.length == 1) { 
+     if(funcInfo.types.length > 0) { -%>
+        <%= checkOutReturn(funcInfo.paramNames[0], 'return') %>;
+<% }} else { -%>
+<% let first = true;
+   for(let i = 0; i < funcInfo.eIndexes.length; i++) {
+      if(funcInfo.types.length > 0) { 
+        if (i === funcInfo.eIndexes.length - 1) { -%>
+        else
+            <%= checkOutReturn(funcInfo.paramNames[i], 'return') %>;
+<%      } else { -%>
+<% if (first) { 
+    first = false; -%>
+        if (eInd == <%= funcInfo.eIndexes[i] %>)
+<% } else { -%>
+        else if (eInd == <%= funcInfo.eIndexes[i] %>)
+<% } -%>
+            <%= checkOutReturn(funcInfo.paramNames[i], 'return') %>;
+<%      } -%>
+<%    }} -%>
+<% } -%>
+    }
+
+<% }); -%>
+}
+

@@ -1,0 +1,81 @@
+pragma solidity ^0.4.25;
+
+contract <%= policyName %>_Contract {
+
+    function canPropose (uint rProposer, uint opInd, uint eInd) public pure returns(uint) {
+<%  firstOp = true;
+    for (let [kOp, roleMap] of requestMap) {
+      if(firstOp == true) { 
+        firstOp = false; -%>
+        if (opInd == <%= kOp %>) {
+<%    } else { -%>
+        } else if (opInd == <%= kOp %>) {
+<%    } -%>
+<%  firstR = true;
+    for (let [kRole, elements] of roleMap) { 
+          if (firstR) { 
+              firstR = false; -%>
+            if (rProposer == <%= kRole %>) {
+<%        } else { -%>
+            } else if (rProposer == <%= kRole %>) {
+<%        } -%>
+<%      firstE = true;   
+        elements.forEach(pair => { 
+          if (firstE) { 
+              firstE = false; -%>
+                if (eInd == <%= pair[0] %>)
+<%        } else { -%>
+                else if (eInd == <%= pair[0] %>)
+<%        } -%>
+                    return <%= pair[1] %>;
+<%      }); -%>
+<%    } -%>
+            }
+<%  } -%>
+        }
+        return 0;
+    }
+
+    function requirePEndorsement(uint reqId) public pure returns(bool) {
+        return <%= endorsementBitSet %> & (uint(1) << reqId) != 0;
+    }
+
+    function assertPEndorsement(uint reqId, uint rEndorser, uint endorsedBy, uint rejectedBy, uint rAgreed, uint rNAgreed, bool isAccepted) public pure returns(uint) {
+<% if(requireEndorsement) { -%>
+        uint endorserMask = uint(1) << rEndorser;
+        require((endorsedBy | rejectedBy) & endorserMask == 0);
+<% if(hasDisjunctionSets) { %>
+        endorsedBy |= endorserMask;
+        rejectedBy |= endorserMask;
+<% } -%>
+<%  elseCond = false;
+    for (let [kReq, eType] of endorsementType) { 
+        if (eType !== 0) { -%>
+        <%= elseCond ? 'else ' : '' %>if (reqId == <%= kReq %>) {
+            require(endorserMask & uint(<%= disjunctionSetJoinMask(kReq) %>) != 0);
+<%      if (eType === 1) { -%>
+<%          setMask = disjunctionSetMask(kReq);
+            fOr = true; fAnd = true -%>
+            if (isAccepted && (<% setMask.forEach(andS => { -%><%= !fOr ? '|| ' : '' -%>endorsedBy & <%= andS %> == <%= andS %><% fOr = false;}) -%>))
+                return 2;
+            else if (!isAccepted && (<% setMask.forEach(andS => { -%><% if(!fAnd) { -%> && <% } -%>rejectedBy & <%= andS %> != 0<% fAnd = false;}) -%>))
+                return 0;
+<%      } else if (eType === 2) { 
+            let rTotal = totalVoters(kReq) 
+            let needed = Math.floor(endorsementRatio(kReq) * rTotal, 100) 
+            if(endorsementRatio(kReq) * rTotal % 100 > 0) 
+               needed++; -%>
+            if(isAccepted && rAgreed + 1 >= uint(<%= needed %>))
+                return 2;
+            else if(!isAccepted && uint(<%= rTotal %>) + rAgreed - rNAgreed - 1 < uint(<%= needed %>))
+                return 0;
+<%      } -%>
+        }
+<%      } -%>
+<%      elseCond = true; } -%>
+        return 1;
+<% } else { -%>
+        return 2;
+<% } -%>
+    }
+}
