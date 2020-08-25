@@ -1,0 +1,15 @@
+{
+	"compilerOptions": {
+		"module": "commonjs",
+		"target": "es2019",
+		"outDir": "../out",
+		"lib": [
+			"es2019"
+		],
+		"sourceMap": true,
+		"experimentalDecorators": true,      /* Enables experimental support for ES7 decorators. */
+	},
+	"exclude": [
+		"node_modules"
+	]
+}

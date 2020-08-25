@@ -1,0 +1,11 @@
+pragma solidity >= 0.4.25 < 0.7.0;
+
+import '<%= contractName %>Data';
+
+contract <%= contractName %>Factory {
+
+    function newInstance() public returns(address) {
+        return address(new <%= contractName %>Data());
+    }
+
+}

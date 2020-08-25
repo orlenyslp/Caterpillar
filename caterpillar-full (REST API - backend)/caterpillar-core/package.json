@@ -1,0 +1,48 @@
+{
+  "name": "node-express-typescript",
+  "description": "node-express-typescript Sample Application (TypeScript)",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node ./out/www.js",
+    "compile": "node ./node_modules/typescript/bin/tsc -p ./src",
+    "antlr4ts": "antlr4ts -o ./src/models/dynamic_binding  -visitor ./src/models/dynamic_binding/binding_grammar.g4"
+  },
+  "dependencies": {
+    "antlr4": "^4.7.1",
+    "antlr4ts": "^0.4.1-alpha.0",
+    "bignumber.js": "^4.0.1",
+    "body-parser": "^1.19.0",
+    "bpmn-moddle": "^7.0.3",
+    "cors": "^2.8.5",
+    "debug": "~4.1.1",
+    "ejs": "^2.5.6",
+    "express": "^4.17.1",
+    "mongoose": "^5.9.21",
+    "morgan": "^1.10.0",
+    "solc": "^0.6.10",
+    "web3": "^1.2.9",
+    "colors": "^1.4.0"
+  },
+  "devDependencies": {
+    "@types/antlr4": "^4.7.0",
+    "@types/body-parser": "^1.19.0",
+    "@types/debug": "^4.1.5",
+    "@types/express": "^4.17.6",
+    "@types/gulp": "^4.0.6",
+    "@types/gulp-less": "^0.0.31",
+    "@types/gulp-nodemon": "^0.0.32",
+    "@types/marked": "^1.1.0",
+    "@types/morgan": "^1.9.1",
+    "@types/node": "^12.7.2",
+    "antlr4ts-cli": "^0.4.0-alpha.4",
+    "browser-sync": "^2.26.7",
+    "gulp": "^4.0.2",
+    "gulp-less": "^4.0.1",
+    "gulp-nodemon": "^2.5.0",
+    "gulp-tsb": "^4.0.5",
+    "marked": "^1.1.0",
+    "typescript": "^3.9.6",
+    "xml2js": "^0.4.23"
+  }
+}
