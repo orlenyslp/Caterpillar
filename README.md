@@ -1,21 +1,21 @@
 # Caterpillar
 BPMN execution engine on Ethereum
 
-Caterpillar is a Business Process Management System (BPMS) that runs on top of Ethereum and that relies on the translation of process models into smart contracts. More specifically, Caterpillar accepts as input a process model specified in BPMN and generates a set of smart contracts that captures the underlying behavior. The smart contracts, written in Ethereum's Solidity language, can then be compiled and deployed to the public or any other private Ethereum network using standard tools. Moreover, Caterpillar exhibits a REST API that can be used to interact with running instances of the deployed process models.
+Caterpillar is a Business Process Management System (BPMS) prototype that runs on top of Ethereum and that relies on the translation of process models into smart contracts. More specifically, Caterpillar accepts as input a process model specified in BPMN and generates a set of smart contracts that captures the underlying behavior. The smart contracts, written in Ethereum's Solidity language, can then be compiled and deployed to the public or any other private Ethereum network using standard tools. Moreover, Caterpillar exhibits a REST API that can be used to interact with running instances of the deployed process models.
 
-Caterpillar also provides a set of modelling tools and an execution panel which interact with the underlying execution engine via the aforementioned REST API. The latter can also be used by third party software to interact in a programmatic way via Caterpillar with the instances of business process running on the blockchain.
+Caterpillar also provides a set of modelling tools and an execution panel (in releases v1.0, 2.0 and 2.1) which interact with the underlying execution engine via the aforementioned REST API. The latter can also be used by third party software to interact in a programmatic way via Caterpillar with the instances of business process running on the blockchain.
 
-The prototype has two versions. We are currently developing the version v2.0, which follows a different approach from v1.0. However, we kept the source code of v1.0 as a reference, although we are not currently working on such an implementation.
+Caterpillar’s code distribution in this repository contains three different folders in v1.0 and two in v2.0, v2.1 and v3.0. The folder __caterpillar_core__ includes the implementation of the core components, __execution_panel__ consists of the code of a BPMN visualizer that serves to keep track of the execution state of process instances and to lets users check in process data. The __services_manager__ folder contains the implementation for an external service which is used only in v1.0 for demonstration purposes. In v2.1, the source code is in the folder labelled as "prototype". Besides, the folder "Dynamic Binding Example" contains the binding policy and BPMN model used as running example in https://arxiv.org/abs/1812.02909.
 
-The approach implemented by the v2.0 can be accessed from: https://arxiv.org/abs/1808.03517.
+The approach implemented by the v2.0 corresponding to the compilation-based engine can be accessed from: https://onlinelibrary.wiley.com/doi/full/10.1002/spe.2702 (paper at journal _Sowtware: Practice and Experience_) or https://arxiv.org/abs/1808.03517 (preprint).
 
-The paper describing the Role Dynamic Binding and Access Control implemented by v2.1 can be accessed from: https://arxiv.org/abs/1812.02909.
+The paper describing the Role Dynamic Binding and Access Control implemented by v2.1 can be accessed from: https://link.springer.com/chapter/10.1007/978-3-030-21290-2_25 (conference paper presented at _CAISE'19_) or https://arxiv.org/abs/1812.02909 (preprint). More detailed documentation on how to use Caterpillar (v2.0 and v2.1) can be found at:  https://github.com/orlenyslp/Caterpillar/blob/master/v2.1/CaterpillarDoc.pdf
 
-More detailed documentation on how to use Caterpillar (v2.0 and v2.1) can be found at:  https://github.com/orlenyslp/Caterpillar/blob/master/v2.1/CaterpillarDoc.pdf
+The paper describing the interpretation-based engine implemented by v3.0 can be accessed from: https://ieeexplore.ieee.org/document/8944990 (conference paper presented at _EDOC'19_) or https://arxiv.org/abs/1906.01420 (preprint)
 
-Additionally, a demo paper about v1.0: can be accessed from: http://ceur-ws.org/Vol-1920/BPM_2017_paper_199.pdf
+Additionally, a demo paper about v1.0: can be accessed from: http://ceur-ws.org/Vol-1920/BPM_2017_paper_199.pdf. We are keping the source code of v1.0 as a reference, although we are not currently working on such an implementation.
 
-Caterpillar’s code distribution in this repository contains three different folders in v1.0 and two in v2.0. The folder __caterpillar_core__ includes the implementation of the core components, __execution_panel__ consists of the code of a BPMN visualizer that serves to keep track of the execution state of process instances and to lets users check in process data. The __services_manager__ folder contains the implementation for an external service which is used only in v1.0 for demonstration purposes. In v2.1, the source code is in the folder labelled as "prototype". Besides, the folder "Dynamic Binding Example" contains the binding policy and BPMN model used as running example in https://arxiv.org/abs/1812.02909.
+> We are currently developing the release labeled __caterpillar-full (REST API - backend)__, which puts together the code of the releases v2.0, v2.1 and v3.0 into a single system instead of handling them as separated versions. The most recent release also migrates the system to the latest versions of the libraries (see package.json file), removing compatibility issues in v2.0, v2.1 and v3.0 (e.g., with web3, solc, node.js, etc.), which use older versions. Besides, we also refactored the code to increase readability, modularity, and reusability of the system. IMPORTANT: The release __caterpillar-full (REST API - backend)__ exposes the functionalities of Caterpillar through a REST API, i.e., there is no visual interface like the frontend application implemented by the execution-panel in the releases v2.0 and v2.1. We are currently designing a developing a new execution-panel (frontend application) whose release is expected by the beginning of 2021.
 
 For running Caterpillar locally, download the source code from the repository and follow the next steps to set up the applications and install the required dependencies. For running caterpillar from a Docker image go directly to the last section of this document. Be aware that the Docker image works only on the version v1.0.
 
@@ -119,7 +119,7 @@ From the __services_manager__ folder is possible to run the script
 
 to register the services required by the running example provided in the core.
 
-## How to use Execution Panel
+## How to use Execution Panel (ONLY FOR V2.0 and V2.1)
 
 > Before running the Execution Panel, make sure you installed angular-cli: https://github.com/angular/angular-cli/wiki
 
