@@ -1,4 +1,4 @@
-import { print, TypeMessage } from "./../../../adapters/logs/console-log";
+import { print, TypeMessage } from "../../../adapters/messages/console-log";
 import {
   ElementIFlow,
   SubProcLinkInfo,

@@ -1,6 +1,6 @@
 import * as fs from "fs";
 
-import { printError } from "./../../adapters/logs/error-logs";
+import { printError } from "../../adapters/messages/error-logs";
 import {
   RoleBindingPolicy,
   RoleTaskMap,
@@ -10,7 +10,7 @@ import {
   print,
   printSeparator,
   TypeMessage,
-} from "./../../adapters/logs/console-log";
+} from "../../adapters/messages/console-log";
 import { AccountInfo } from "./../../adapters/ethereum-blockchain/structs/account-info";
 import {
   CompilationError,

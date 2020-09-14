@@ -11,7 +11,7 @@ import * as registryService from "../../runtime-registry/services/registry-servi
 import * as runtimeRegistryService from "../../runtime-registry/services/registry-service";
 
 import { ContractInfo } from "../../adapters/ethereum-blockchain/structs/contract-info";
-import { printl } from "../../adapters/logs/request-logs";
+import { printl } from "../../adapters/messages/request-logs";
 
 let runtimeRegistry: ContractInfo;
 

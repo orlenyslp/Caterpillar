@@ -2,7 +2,7 @@ import {
   print,
   TypeMessage,
   printSeparator,
-} from "./../../adapters/logs/console-log";
+} from "../../adapters/messages/console-log";
 import * as fs from "fs";
 import * as path from "path";
 import * as ejs from "ejs";

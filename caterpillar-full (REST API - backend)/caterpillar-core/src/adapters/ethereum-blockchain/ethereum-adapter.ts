@@ -1,5 +1,5 @@
 import { PromiseError, Component } from "./../errors/promise-error";
-import { print, TypeMessage, printSeparator } from "./../logs/console-log";
+import { print, TypeMessage, printSeparator } from "../messages/console-log";
 import { FunctionInfo } from "./structs/function-info";
 import { AccountInfo } from "./structs/account-info";
 import { CompilationResult } from "./structs/compilation-output";

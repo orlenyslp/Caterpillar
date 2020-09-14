@@ -8,7 +8,7 @@ import {
   TypeMessage,
   print,
   printSeparator,
-} from "../../adapters/logs/console-log";
+} from "../../adapters/messages/console-log";
 
 import { ContractInfo } from "../../adapters/ethereum-blockchain/structs/contract-info";
 

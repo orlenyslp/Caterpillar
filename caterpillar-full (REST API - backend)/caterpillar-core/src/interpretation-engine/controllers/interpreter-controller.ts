@@ -1,8 +1,8 @@
 import { ContractInfo } from "./../../adapters/ethereum-blockchain/structs/contract-info";
 import { webSocket } from "./../../app";
-import { printl } from "./../../adapters/logs/request-logs";
-import { printp } from "./../../adapters/logs/pending-logs";
-import { TypeMessage, print } from "../../adapters/logs/console-log";
+import { printl } from "../../adapters/messages/request-logs";
+import { printp } from "../../adapters/messages/pending-logs";
+import { TypeMessage, print } from "../../adapters/messages/console-log";
 import { Request, Response } from "express";
 
 import * as parsingService from "../services/process-analyser/bpmn-parser";

@@ -9,7 +9,7 @@ import {
   print,
   printSeparator,
   TypeMessage,
-} from "./../../adapters/logs/console-log";
+} from "../../adapters/messages/console-log";
 import { RepoType } from "../../adapters/mongo-db/repo-types";
 
 import * as ethereumAdapter from "./../../adapters/ethereum-blockchain/ethereum-adapter";

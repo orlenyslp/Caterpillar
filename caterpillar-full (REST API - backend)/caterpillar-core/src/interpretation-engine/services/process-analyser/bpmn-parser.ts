@@ -1,4 +1,4 @@
-import { print, TypeMessage } from '../../../adapters/logs/console-log';
+import { print, TypeMessage } from '../../../adapters/messages/console-log';
 import * as BpmnModdle from "bpmn-moddle";
 import * as fs from "fs";
 import * as path from "path";

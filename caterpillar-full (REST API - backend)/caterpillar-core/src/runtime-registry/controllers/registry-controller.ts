@@ -8,7 +8,7 @@ import {
 } from "../../adapters/ethereum-blockchain/structs/contract-info";
 
 import * as registryService from "../services/registry-service";
-import { printl } from "../../adapters/logs/request-logs";
+import { printl } from "../../adapters/messages/request-logs";
 
 export let deployRuntimeRegistry = (request: Request, response: Response) => {
   try {

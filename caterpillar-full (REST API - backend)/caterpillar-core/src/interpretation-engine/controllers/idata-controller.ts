@@ -1,5 +1,5 @@
-import { printl } from './../../adapters/logs/request-logs';
-import { print } from './../../adapters/logs/console-log';
+import { printl } from '../../adapters/messages/request-logs';
+import { print } from '../../adapters/messages/console-log';
 import { ContractInfo } from "./../../adapters/ethereum-blockchain/structs/contract-info";
 import { Request, Response } from "express";
 

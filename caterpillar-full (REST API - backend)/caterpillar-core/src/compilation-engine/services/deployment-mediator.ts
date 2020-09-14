@@ -1,4 +1,4 @@
-import { printp } from "./../../adapters/logs/pending-logs";
+import { printp } from "../../adapters/messages/pending-logs";
 import { PromiseError, Component } from "./../../adapters/errors/promise-error";
 import { ProcessCEMetadata } from "../../adapters/mongo-db/repo-models";
 
@@ -25,7 +25,7 @@ import {
   TypeMessage,
   print,
   printSeparator,
-} from "../../adapters/logs/console-log";
+} from "../../adapters/messages/console-log";
 
 import * as mongoDBAdapter from "../../adapters/mongo-db/mongo-db-adapter";
 import { RepoType } from "../../adapters/mongo-db/repo-types";

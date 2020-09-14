@@ -6,7 +6,7 @@ import * as deploymentService from "./../services/deployment-mediator";
 import * as policyInfoCollector from "./../services/policy-info-collector";
 import * as runtimeRegistryService from "./../../runtime-registry/services/registry-service";
 
-import { printl } from "../../adapters/logs/request-logs";
+import { printl } from "../../adapters/messages/request-logs";
 
 let runtimeRegistry: ContractInfo;
 

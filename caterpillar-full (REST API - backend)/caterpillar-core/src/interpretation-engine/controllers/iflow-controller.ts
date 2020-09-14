@@ -1,9 +1,9 @@
 import { ContractInfo } from "./../../adapters/ethereum-blockchain/structs/contract-info";
-import { TypeMessage, print } from "./../../adapters/logs/console-log";
+import { TypeMessage, print } from "../../adapters/messages/console-log";
 import { UpdatingIFlowRequest } from "./../utils/structs/async-requests";
 import { ElementIFlow, SubProcLinkInfo } from "./../utils/structs/parsing-info";
 import { Request, Response } from "express";
-import { printl } from "../../adapters/logs/request-logs";
+import { printl } from "../../adapters/messages/request-logs";
 
 import * as compilationService from "../services/process-analyser/bpmn-compiler";
 import * as deploymentService from "../services/process-setup-handler/deployment-mediator";

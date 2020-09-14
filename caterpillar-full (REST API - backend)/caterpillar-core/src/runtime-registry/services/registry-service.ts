@@ -2,7 +2,7 @@ import {
   print,
   printSeparator,
   TypeMessage,
-} from "./../../adapters/logs/console-log";
+} from "../../adapters/messages/console-log";
 import { ContractInfo } from "./../../adapters/ethereum-blockchain/structs/contract-info";
 import { DeploymentOutput } from "../../adapters/ethereum-blockchain/structs/deployment-output";
 import * as fs from "fs";
@@ -23,7 +23,7 @@ import * as mongoDBAdapter from "../../adapters/mongo-db/mongo-db-adapter";
 import { RepoType } from "../../adapters/mongo-db/repo-types";
 import { ModelMetadata } from "../../adapters/mongo-db/repo-models";
 import { FunctionInfo } from "../../adapters/ethereum-blockchain/structs/function-info";
-import { printError } from "../../adapters/logs/error-logs";
+import { printError } from "../../adapters/messages/error-logs";
 
 export let getRegistrySolidityCode = () => {
   return fs.readFileSync(

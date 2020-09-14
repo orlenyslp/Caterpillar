@@ -3,9 +3,9 @@ import {
   print,
   TypeMessage,
   printSeparator,
-} from "./../../adapters/logs/console-log";
+} from "../../adapters/messages/console-log";
 import { RuntimeOperationCall } from "./../utils/structs/async-requests";
-import { printError } from "./../../adapters/logs/error-logs";
+import { printError } from "../../adapters/messages/error-logs";
 import { AccountInfo } from "./../../adapters/ethereum-blockchain/structs/account-info";
 import { ContractInfo } from "./../../adapters/ethereum-blockchain/structs/contract-info";
 

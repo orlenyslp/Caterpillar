@@ -1,4 +1,4 @@
-import { printSeparator } from "./../../adapters/logs/console-log";
+import { printSeparator } from "../../adapters/messages/console-log";
 import * as BpmnModdle from "bpmn-moddle";
 import * as fs from "fs";
 import * as path from "path";
@@ -12,7 +12,7 @@ import {
   ParameterInfo,
 } from "../utils/structs/compilation-info";
 
-import { print, TypeMessage } from "../../adapters/logs/console-log";
+import { print, TypeMessage } from "../../adapters/messages/console-log";
 
 const bpmn2solEJS = fs.readFileSync(
   path.join(__dirname, "./../../../templates-ejs/compilation-engine") +

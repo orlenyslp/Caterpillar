@@ -1,5 +1,5 @@
 import { ProcessIEInput } from "./../../../adapters/mongo-db/repo-models";
-import { printSeparator } from "./../../../adapters/logs/console-log";
+import { printSeparator } from "../../../adapters/messages/console-log";
 import {
   SubProcessInfo,
   ElementIFlow,
@@ -15,8 +15,8 @@ import {
 } from "./../../utils/structs/async-requests";
 
 import { DeploymentResult } from "../../../adapters/ethereum-blockchain/structs/deployment-output";
-import { print, TypeMessage } from "../../../adapters/logs/console-log";
-import { printError } from "./../../../adapters/logs/error-logs";
+import { print, TypeMessage } from "../../../adapters/messages/console-log";
+import { printError } from "../../../adapters/messages/error-logs";
 import { CompilationResult } from "../../../adapters/ethereum-blockchain/structs/compilation-output";
 import { AccountInfo } from "../../../adapters/ethereum-blockchain/structs/account-info";
 

@@ -8,7 +8,7 @@ import * as executionService from "../services/execution-monitor";
 import * as runtimeRegistryService from "../../runtime-registry/services/registry-service";
 
 import * as eventMonitor from "../services/event-monitor";
-import { printl } from "../../adapters/logs/request-logs";
+import { printl } from "../../adapters/messages/request-logs";
 
 let runtimeRegistry: ContractInfo;
 

@@ -1,10 +1,10 @@
 import * as fs from "fs";
 
-import { printSeparator } from "./../../adapters/logs/console-log";
+import { printSeparator } from "../../adapters/messages/console-log";
 import { CompilationInput } from "../../adapters/ethereum-blockchain/structs/compilation-input";
 import { ModelInfo } from "../utils/structs/compilation-info";
 import { CompilationInfo } from "../../adapters/ethereum-blockchain/structs/compilation-output";
-import { print, TypeMessage } from "../../adapters/logs/console-log";
+import { print, TypeMessage } from "../../adapters/messages/console-log";
 import {
   CompilationError,
   CompilationResult,
