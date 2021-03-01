@@ -27,7 +27,7 @@
     "ejs-compiled-loader": "^1.1.0",
     "jquery": "^3.2.1",
     "md5": "^2.2.1",
-    "prismjs": "^1.6.0",
+    "prismjs": "^1.23.0",
     "rxjs": "^5.1.0",
     "zone.js": "^0.8.4"
   },
