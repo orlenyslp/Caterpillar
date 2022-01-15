@@ -41,7 +41,7 @@
     "gulp-less": "^4.0.1",
     "gulp-nodemon": "^2.5.0",
     "gulp-tsb": "^4.0.5",
-    "marked": "^1.1.0",
+    "marked": "^4.0.10",
     "typescript": "^3.9.6",
     "xml2js": "^0.4.23"
   }
