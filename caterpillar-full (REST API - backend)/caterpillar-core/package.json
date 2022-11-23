@@ -36,7 +36,7 @@
     "@types/morgan": "^1.9.1",
     "@types/node": "^12.7.2",
     "antlr4ts-cli": "^0.4.0-alpha.4",
-    "browser-sync": "^2.26.7",
+    "browser-sync": "^2.27.10",
     "gulp": "^4.0.2",
     "gulp-less": "^4.0.1",
     "gulp-nodemon": "^2.5.0",
